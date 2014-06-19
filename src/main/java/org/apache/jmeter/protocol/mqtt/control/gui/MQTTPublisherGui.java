@@ -21,19 +21,6 @@
 */
 
 package org.apache.jmeter.protocol.mqtt.control.gui;
-import java.awt.BorderLayout;
-import java.awt.Color;
-import java.awt.Component;
-import java.awt.Dimension;
-import javax.swing.BorderFactory;
-import javax.swing.Box;
-import javax.swing.BoxLayout;
-import javax.swing.JCheckBox;
-import javax.swing.JComboBox;
-import javax.swing.JLabel;
-import javax.swing.JPanel;
-import javax.swing.event.ChangeEvent;
-import javax.swing.event.ChangeListener;
 import org.apache.jmeter.gui.util.JLabeledRadioI18N;
 import org.apache.jmeter.gui.util.JSyntaxTextArea;
 import org.apache.jmeter.gui.util.JTextScrollPane;
@@ -44,6 +31,14 @@ import org.apache.jmeter.testelement.TestElement;
 import org.apache.jmeter.util.JMeterUtils;
 import org.apache.jorphan.gui.JLabeledPasswordField;
 import org.apache.jorphan.gui.JLabeledTextField;
+
+import javax.swing.*;
+import javax.swing.event.ChangeEvent;
+import javax.swing.event.ChangeListener;
+import java.awt.BorderLayout;
+import java.awt.Color;
+import java.awt.Component;
+import java.awt.Dimension;
 
 /**
  * @author Tuan Hiep
@@ -331,14 +326,16 @@ public class MQTTPublisherGui extends AbstractSamplerGui implements
 		mqttPwd.setText(sampler.getPassword());
 		textMessage.setInitialText(sampler.getTextMessage());
 		textMessage.setCaretPosition(0);
-		msgChoice.setText(sampler.getMessageChoice());
-		iterations.setText(sampler.getIterations());
-		useAuth.setSelected(sampler.isUseAuth());
-		mqttUser.setEnabled(useAuth.isSelected());
-		mqttPwd.setEnabled(useAuth.isSelected());
-		updateChoice(msgChoice.getText());
-		updateChoice(msgFormat.getText());
-		updateChoice("Suffix="+String.valueOf(this.suffixClientId.isSelected()));
+        clientId.setText(sampler.getCLIENT_ID());
+        connectionPerTopic.setSelected(sampler.isOneConnectionPerTopic());
+        msgChoice.setText(sampler.getMessageChoice());
+        iterations.setText(sampler.getIterations());
+        useAuth.setSelected(sampler.isUseAuth());
+        mqttUser.setEnabled(useAuth.isSelected());
+        mqttPwd.setEnabled(useAuth.isSelected());
+        updateChoice(msgChoice.getText());
+        updateChoice(msgFormat.getText());
+        updateChoice("Suffix=" + String.valueOf(this.suffixClientId.isSelected()));
 	
 	}
 	
