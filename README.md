@@ -54,7 +54,7 @@ In the principal interface of MQTT Publisher we have the fields:
 The topic's names are separated by a comma ","  
 For example: List Topic: GRENOBLE/LIG,GRENOBLE/UJF-LIG  
 This means, you'll publish to 2 topics: GRENOBLE/LIG and GRENOBLE/UJF-LIG  
-You can choose the option **One connection per topic** : It means that for each topic in the list above, the plugin will create one correspondant
+You can choose the option **One connection per topic** : It means that for each topic in the list above, the plugin will create one correspondent
  connection. Note that, if the client Id is "Noel De Palma", for example, and you have 2 topics in the list, so the plugin will create 2 connections with 2 Client 
 Id : "Noel De Palma 0" and "Noel De Palma 1"  
 The plugin provide two strategies to publish:  
