@@ -54,7 +54,9 @@ public class MqttPublisher extends AbstractJavaSamplerClient implements
 	private FutureConnection[] connectionArray;
 	public static int numSeq=0;
 	private Random generator = new Random();	
-	private SecureRandom secureGenerator= new SecureRandom(); 
+	private SecureRandom secureGenerator= new SecureRandom();
+	private String label = "";
+	
 	@Override
 	public Arguments getDefaultParameters() {
 		Arguments defaultParameters = new Arguments();
@@ -67,6 +69,8 @@ public class MqttPublisher extends AbstractJavaSamplerClient implements
 	}
 
 	public void setupTest(JavaSamplerContext context) {
+		label = context.getParameter("LABEL");
+		
 		String host = context.getParameter("HOST");
 		String clientId = context.getParameter("CLIENT_ID");
 		if("TRUE".equalsIgnoreCase(context.getParameter("RANDOM_SUFFIX"))){
@@ -428,7 +432,7 @@ public class MqttPublisher extends AbstractJavaSamplerClient implements
 
 	public SampleResult runTest(JavaSamplerContext context) {
 		SampleResult result = new SampleResult();
-
+		result.setSampleLabel(label);
 		try {
 			
 			result.sampleStart(); // start stopwatch
@@ -436,7 +440,7 @@ public class MqttPublisher extends AbstractJavaSamplerClient implements
 			result.sampleEnd(); // stop stopwatch
 			result.setSuccessful(true);
 			result.setResponseMessage("Sent " + total.get() + " messages total");
-			result.setResponseCode("OK");
+			result.setResponseCodeOK();
 		} catch (Exception e) {
 			result.sampleEnd(); // stop stopwatch
 			result.setSuccessful(false);

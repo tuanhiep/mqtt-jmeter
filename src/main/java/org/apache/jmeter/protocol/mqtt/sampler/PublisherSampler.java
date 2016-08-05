@@ -415,6 +415,8 @@ public class PublisherSampler extends BaseMQTTSampler implements ThreadListener,
 			parameters.addArgument("RANDOM_SUFFIX","FALSE");
 		}
 		
+		parameters.addArgument("LABEL", this.getName());
+		
 		this.context = new JavaSamplerContext(parameters);
 		this.producer.setupTest(this.context);
 	}

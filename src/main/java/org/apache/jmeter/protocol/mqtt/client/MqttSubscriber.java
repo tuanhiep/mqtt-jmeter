@@ -43,8 +43,10 @@ public class MqttSubscriber extends AbstractJavaSamplerClient implements
 		Serializable {
 	private static final long serialVersionUID = 1L;
 	private CallbackConnection[] connectionArray;
+	private ListenerforSubscribe[] lisenters;
 	private static final String mycharset = "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ";
-
+	private String label = "";
+	
 	public static String getClientId(String clientPrefix, int suffixLength) {
 		Random rand = new Random(System.nanoTime() * System.currentTimeMillis());
 		StringBuilder sb = new StringBuilder();
@@ -69,6 +71,8 @@ public class MqttSubscriber extends AbstractJavaSamplerClient implements
 	}
 
 	public void setupTest(JavaSamplerContext context) {
+		label = context.getParameter("LABEL");
+		
 		String host = context.getParameter("HOST");
 		String clientId = context.getParameter("CLIENT_ID");
 		if ("TRUE".equalsIgnoreCase(context.getParameter("RANDOM_SUFFIX"))) {
@@ -120,11 +124,13 @@ public class MqttSubscriber extends AbstractJavaSamplerClient implements
 			}
 
 			this.connectionArray = new CallbackConnection[size];
+			this.lisenters = new ListenerforSubscribe[size];
 			JMeterContext jmcx = JMeterContextService.getContext();
 			if (size == 1) {
 				this.connectionArray[0] = createConnection(host, clientId
 						+ jmcx.getThreadNum(), durable, user, password);
-				this.connectionArray[0].listener(new ListenerforSubscribe());
+				this.lisenters[0] = new ListenerforSubscribe();
+				this.connectionArray[0].listener(this.lisenters[0]);
 				CallbackforSubscribe cbs = new CallbackforSubscribe();
 				CallbackforConnect cbc = new CallbackforConnect(topic,
 						connectionArray[0], cbs, qos,1);
@@ -136,8 +142,8 @@ public class MqttSubscriber extends AbstractJavaSamplerClient implements
 					for (int j = 0; j < size; j++) {
 						this.connectionArray[j] = createConnection(host, clientId
 								+ jmcx.getThreadNum() + j, durable, user, password);
-						this.connectionArray[j]
-								.listener(new ListenerforSubscribe());
+						this.lisenters[j] = new ListenerforSubscribe();
+						this.connectionArray[j].listener(this.lisenters[j]);
 						CallbackforSubscribe cbs = new CallbackforSubscribe();
 						CallbackforConnect cbc = new CallbackforConnect(topic,
 								connectionArray[j], cbs, qos,size);
@@ -152,8 +158,8 @@ public class MqttSubscriber extends AbstractJavaSamplerClient implements
 					int  r = rand.nextInt(size);
 					this.connectionArray[r] = createConnection(host, clientId
 							+ jmcx.getThreadNum() + r, durable, user, password);
-					this.connectionArray[r]
-							.listener(new ListenerforSubscribe());
+					this.lisenters[r] = new ListenerforSubscribe();
+					this.connectionArray[r].listener(this.lisenters[r]);
 					CallbackforSubscribe cbs = new CallbackforSubscribe();
 					CallbackforConnect cbc = new CallbackforConnect(topicArray[r],
 							connectionArray[r], cbs, qos,1);
@@ -180,24 +186,25 @@ public class MqttSubscriber extends AbstractJavaSamplerClient implements
 				qos = QoS.AT_MOST_ONCE;
 			}
 			this.connectionArray = new CallbackConnection[size];
+			this.lisenters = new ListenerforSubscribe[size];
 			JMeterContext jmcx = JMeterContextService.getContext();
 			if (size == 1) {
 				this.connectionArray[0] = createConnection(host, clientId
 						+ jmcx.getThreadNum(), durable);
-				this.connectionArray[0].listener(new ListenerforSubscribe());
+				this.lisenters[0] = new ListenerforSubscribe();
+				this.connectionArray[0].listener(this.lisenters[0]);
 				CallbackforSubscribe cbs = new CallbackforSubscribe();
 				CallbackforConnect cbc = new CallbackforConnect(topic,
 						connectionArray[0], cbs, qos,1);
 				this.connectionArray[0].connect(cbc);
 			
 			} else if (size > 1) {
-				
 				if("ROUND_ROBIN".equals(strategy)){
 				for (int j = 0; j < size; j++) {
 					this.connectionArray[j] = createConnection(host, clientId
 							+ jmcx.getThreadNum() + j, durable);
-					this.connectionArray[j]
-							.listener(new ListenerforSubscribe());
+					this.lisenters[j] = new ListenerforSubscribe();
+					this.connectionArray[j].listener(this.lisenters[j]);
 					CallbackforSubscribe cbs = new CallbackforSubscribe();
 					CallbackforConnect cbc = new CallbackforConnect(topic,
 							connectionArray[j], cbs, qos,size);
@@ -209,7 +216,8 @@ public class MqttSubscriber extends AbstractJavaSamplerClient implements
 					String[] topicArray = topic.split("\\s*,\\s*");
 					this.connectionArray[r] = createConnection(host, clientId
 							+ jmcx.getThreadNum() + r, durable);
-					this.connectionArray[r].listener(new ListenerforSubscribe());
+					this.lisenters[r] = new ListenerforSubscribe();
+					this.connectionArray[r].listener(this.lisenters[r]);
 					CallbackforSubscribe cbs = new CallbackforSubscribe();
 					CallbackforConnect cbc = new CallbackforConnect(topicArray[r],
 							connectionArray[r], cbs, qos,1);
@@ -246,14 +254,27 @@ public class MqttSubscriber extends AbstractJavaSamplerClient implements
 
 	public SampleResult runTest(JavaSamplerContext context) {
 		SampleResult result = new SampleResult();
+		result.setSampleLabel(label);
 		try {
 			result.sampleStart(); // start stopwatch
-			Thread.sleep(Long.parseLong(context.getParameter("TIMEOUT")));
+			int size = 0;
+			for(ListenerforSubscribe listener : this.lisenters) {
+				size += listener.getSize();
+			}
+			if(size == 0) {
+				System.out.println("The size is zero, sleep for a while..." );
+				Thread.sleep(Long.parseLong(context.getParameter("TIMEOUT")));	
+				for(ListenerforSubscribe listener : this.lisenters) {
+					size += listener.getSize();
+				}
+			}
+			
 			result.sampleEnd(); // stop stopwatch
 			result.setSuccessful(true);
 			result.setResponseMessage("Received "
 					+ context.getParameter("AGGREGATE") + " messages");
-			result.setResponseCode("OK");
+			result.setResponseCodeOK();
+			result.setBytes(size);
 		} catch (Exception e) {
 			result.sampleEnd(); // stop stopwatch
 			result.setSuccessful(false);

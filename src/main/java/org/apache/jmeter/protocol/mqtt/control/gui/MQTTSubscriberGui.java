@@ -169,7 +169,8 @@ public class MQTTSubscriberGui extends AbstractSamplerGui implements ChangeListe
         SubscriberSampler sampler = (SubscriberSampler) el;  
         urlField.setText(sampler.getProviderUrl());        
         mqttDestination.setText(sampler.getDestination());
-        clientId.setText(sampler.getClientId());    
+        clientId.setText(sampler.getClientId());  
+        suffixLength.setText(sampler.getLength());
         mqttUser.setText(sampler.getUsername());
         mqttPwd.setText(sampler.getPassword());
         useAuth.setSelected(sampler.isUseAuth());

@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project name="build_xmeter" default="repack" basedir=".">
+	<property name="jmeter_version" value="3.0"/>
+	<property name="jmeter_home" value="/Users/rockyjin/Downloads/apache-jmeter-3.0"/>
+	<target name="repack" >
+		<delete dir="libs/${jmeter_version}/new_dir"/>
+		<echo>Unzip old ApacheJMeter_core.jar file</echo>
+		<unzip src="libs/${jmeter_version}/ApacheJMeter_core.jar" dest="libs/${jmeter_version}/work_dir"></unzip>
+		
+		<copy todir="libs/${jmeter_version}/work_dir/org/apache/jmeter/resources/" overwrite="true">
+			<fileset dir="ressource/${jmeter_version}" >
+				<include name="**/"/>
+			</fileset>
+		</copy>
+		
+		<echo>Creating new ApacheJMeter_core.jar file</echo>
+		<jar destfile="libs/${jmeter_version}/new_dir/ApacheJMeter_core.jar" manifest="libs/${jmeter_version}/work_dir/META-INF/MANIFEST.MF" basedir="libs/${jmeter_version}/work_dir"/>
+		<delete dir="libs/${jmeter_version}/work_dir"/>
+		
+		<echo>Copy the new ApacheJMeter_core to ${jmeter_home}/lib/ext/ </echo>
+		<copy file="libs/${jmeter_version}/new_dir/ApacheJMeter_core.jar" todir="${jmeter_home}/lib/ext/" overwrite="true" />
+		<copy file="target/mqtt-jmeter-jar-with-dependencies.jar" todir="${jmeter_home}/lib/ext/" overwrite="true" />
+	</target>
+</project>

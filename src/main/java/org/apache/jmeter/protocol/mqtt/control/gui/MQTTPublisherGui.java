@@ -333,6 +333,8 @@ public class MQTTPublisherGui extends AbstractSamplerGui implements
 		textMessage.setCaretPosition(0);
 		msgChoice.setText(sampler.getMessageChoice());
 		iterations.setText(sampler.getIterations());
+		clientId.setText(sampler.getCLIENT_ID());
+		suffixLength.setText(sampler.getLength());
 		useAuth.setSelected(sampler.isUseAuth());
 		mqttUser.setEnabled(useAuth.isSelected());
 		mqttPwd.setEnabled(useAuth.isSelected());
