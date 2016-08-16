@@ -12,6 +12,7 @@ public class ListenerforSubscribe implements Listener {
 
 	public static AtomicLong count= new AtomicLong(0); 
 	private AtomicInteger size = new AtomicInteger(0);
+	private Throwable exception;
 	@Override
 	public void onConnected() {
 		System.out.println("Subscriber is listening");
@@ -36,7 +37,12 @@ public class ListenerforSubscribe implements Listener {
 	@Override
 	public void onFailure(Throwable value) {
 		System.out.println("Subscriber couldn't set up listener");
+		this.exception = value;
 		System.out.println(value);
+	}
+	
+	public Throwable getException() {
+		return exception;
 	}
 
 	public int getSize() {

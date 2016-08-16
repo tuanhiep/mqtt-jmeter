@@ -251,7 +251,7 @@ public class MqttSubscriber extends AbstractJavaSamplerClient implements
 		client.setCleanSession(!durable);
 		return client.callbackConnection();
 	}
-
+	
 	public SampleResult runTest(JavaSamplerContext context) {
 		SampleResult result = new SampleResult();
 		result.setSampleLabel(label);
@@ -259,6 +259,9 @@ public class MqttSubscriber extends AbstractJavaSamplerClient implements
 			result.sampleStart(); // start stopwatch
 			int size = 0;
 			for(ListenerforSubscribe listener : this.lisenters) {
+				if(listener.getException() != null) {
+					throw new Exception(listener.getException().getMessage());
+				}
 				size += listener.getSize();
 			}
 			if(size == 0) {
@@ -271,8 +274,7 @@ public class MqttSubscriber extends AbstractJavaSamplerClient implements
 			
 			result.sampleEnd(); // stop stopwatch
 			result.setSuccessful(true);
-			result.setResponseMessage("Received "
-					+ context.getParameter("AGGREGATE") + " messages");
+			result.setResponseMessage("Received " + context.getParameter("AGGREGATE") + " messages");
 			result.setResponseCodeOK();
 			result.setBytes(size);
 		} catch (Exception e) {

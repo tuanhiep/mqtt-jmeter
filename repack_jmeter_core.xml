@@ -5,7 +5,7 @@
 	<target name="repack" >
 		<delete dir="libs/${jmeter_version}/new_dir"/>
 		<echo>Unzip old ApacheJMeter_core.jar file</echo>
-		<unzip src="libs/${jmeter_version}/ApacheJMeter_core.jar" dest="libs/${jmeter_version}/work_dir"></unzip>
+		<unzip src="${jmeter_home}/lib/ext/ApacheJMeter_core.jar" dest="libs/${jmeter_version}/work_dir"></unzip>
 		
 		<copy todir="libs/${jmeter_version}/work_dir/org/apache/jmeter/resources/" overwrite="true">
 			<fileset dir="ressource/${jmeter_version}" >
