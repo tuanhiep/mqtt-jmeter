@@ -1,24 +1,33 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <project name="build_xmeter" default="repack" basedir=".">
-	<property name="jmeter_version" value="3.0"/>
-	<property name="jmeter_home" value="/Users/rockyjin/Downloads/apache-jmeter-3.0"/>
-	<target name="repack" >
-		<delete dir="libs/${jmeter_version}/new_dir"/>
-		<echo>Unzip old ApacheJMeter_core.jar file</echo>
-		<unzip src="${jmeter_home}/lib/ext/ApacheJMeter_core.jar" dest="libs/${jmeter_version}/work_dir"></unzip>
+	<property name="jmeter_tar_file_name" value="apache-jmeter-3.0"/>
+	<property name="jmeter_tar_folder" value="/Users/rockyjin/Downloads"/>
+	
+	<property name="jmeter_tar_file_location" value="${jmeter_tar_folder}/${jmeter_tar_file_name}.tgz"/>
+	<property name="jmeter_tar_file_name_new_loc" value="${jmeter_tar_file_name}_new"/>
+
+	<target name="unpack_jmeter">
+		<delete dir="libs/${jmeter_tar_file_name_new_loc}/"/>
+		<echo>Adding MQTT plugin resources...</echo>
+		<untar compression="gzip" src="${jmeter_tar_file_location}" dest="libs"/>	
+	</target>
+	
+	<target name="repack" depends="unpack_jmeter">
+		<delete dir="libs/${jmeter_tar_file_name}/new_dir"/>
+		<echo>Unzip original ApacheJMeter_core.jar</echo>
+		<unzip src="libs/${jmeter_tar_file_name}/lib/ext/ApacheJMeter_core.jar" dest="libs/${jmeter_tar_file_name}/work_dir"></unzip>
 		
-		<copy todir="libs/${jmeter_version}/work_dir/org/apache/jmeter/resources/" overwrite="true">
-			<fileset dir="ressource/${jmeter_version}" >
-				<include name="**/"/>
-			</fileset>
-		</copy>
+		<concat destfile="libs/${jmeter_tar_file_name}/work_dir/org/apache/jmeter/resources/messages.properties" append="true" fixlastline="yes" eol="crlf">
+			<filelist dir="ressource" files="mqtt_res.properties"/>
+		</concat>
 		
 		<echo>Creating new ApacheJMeter_core.jar file</echo>
-		<jar destfile="libs/${jmeter_version}/new_dir/ApacheJMeter_core.jar" manifest="libs/${jmeter_version}/work_dir/META-INF/MANIFEST.MF" basedir="libs/${jmeter_version}/work_dir"/>
-		<delete dir="libs/${jmeter_version}/work_dir"/>
-		
-		<echo>Copy the new ApacheJMeter_core to ${jmeter_home}/lib/ext/ </echo>
+		<jar destfile="libs/${jmeter_tar_file_name_new_loc}/ApacheJMeter_core.jar" manifest="libs/${jmeter_tar_file_name}/work_dir/META-INF/MANIFEST.MF" basedir="libs/${jmeter_tar_file_name}/work_dir"/>
+		<copy file="target/mqtt-jmeter-jar-with-dependencies.jar" todir="libs/${jmeter_tar_file_name_new_loc}" overwrite="true" />
+		<delete dir="libs/${jmeter_tar_file_name}/"/>
+
+		<!--echo>Copy the new ApacheJMeter_core to ${jmeter_home}/lib/ext/ </echo>
 		<copy file="libs/${jmeter_version}/new_dir/ApacheJMeter_core.jar" todir="${jmeter_home}/lib/ext/" overwrite="true" />
-		<copy file="target/mqtt-jmeter-jar-with-dependencies.jar" todir="${jmeter_home}/lib/ext/" overwrite="true" />
+		<copy file="target/mqtt-jmeter-jar-with-dependencies.jar" todir="${jmeter_home}/lib/ext/" overwrite="true" /-->
 	</target>
 </project>
