@@ -1,0 +1,57 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project name="buildJMeterMQTT" default="build" basedir="." xmlns:artifact="antlib:org.apache.maven.artifact.ant">
+
+	<target name="build" depends="init">
+	</target>
+
+	<macrodef name="get-and-checksum">
+		<attribute name="url" />
+		<attribute name="dest" />
+		<sequential>
+			<local name="destdir" />
+			<dirname property="destdir" file="@{dest}" />
+			<get dest="${destdir}">
+				<url url="@{url}" />
+			</get>
+		</sequential>
+	</macrodef>
+
+	<target name="init">
+		<taskdef resource="net/sf/antcontrib/antcontrib.properties" />
+		<foreach list="apache-jmeter-2.10,apache-jmeter-2.11" param="jmeter" delimiter="," target="download_and_repack" />
+	</target>
+
+	<target name="download_and_repack">
+		<echo>Handling file ${jmeter}</echo>
+		<available file="${jmeter}.tgz" property="file_downloaded" />
+		<echo>The property file_downloaded: ${file_downloaded}</echo>
+		<if>
+			<equals arg1="${file_downloaded}" arg2="true" />
+			<then>
+				<echo message="File downloaded." />
+			</then>
+			<else>
+				<echo message="File has not been downloaded." />
+				<get-and-checksum url="https://archive.apache.org/dist/jmeter/binaries/${jmeter}.tgz" dest="${jmeter}.tgz" />
+			</else>
+		</if>
+		
+		<delete dir="libs/${jmeter}/" />
+		
+		<untar compression="gzip" src="${jmeter}.tgz" dest="libs" />
+		
+		<delete dir="libs/${jmeter}/new_dir" />
+		<echo>Unzip original ApacheJMeter_core.jar</echo>
+		<unzip src="libs/${jmeter}/lib/ext/ApacheJMeter_core.jar" dest="libs/${jmeter}/work_dir" />
+
+		<echo>Adding MQTT plugin resources...</echo>
+		<concat destfile="libs/${jmeter}/work_dir/org/apache/jmeter/resources/messages.properties" append="true" fixlastline="yes" eol="crlf">
+			<filelist dir="ressource" files="mqtt_res.properties" />
+		</concat>
+
+		<echo>Creating new ApacheJMeter_core.jar file</echo>
+		<jar destfile="libs/${jmeter}_new/ApacheJMeter_core.jar" manifest="libs/${jmeter}/work_dir/META-INF/MANIFEST.MF" basedir="libs/${jmeter}/work_dir" />
+		<copy file="target/mqtt-jmeter-jar-with-dependencies.jar" todir="libs/${jmeter}_new" overwrite="true" />
+		<delete dir="libs/${jmeter}/" />
+	</target>
+</project>
