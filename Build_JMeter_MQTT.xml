@@ -18,7 +18,7 @@
 
 	<target name="init">
 		<taskdef resource="net/sf/antcontrib/antcontrib.properties" />
-		<foreach list="apache-jmeter-2.10,apache-jmeter-2.11,apache-jmeter-2.12,apache-jmeter-2.13,apache-jmeter-2.6,apache-jmeter-2.7,apache-jmeter-2.8,apache-jmeter-2.9,apache-jmeter-3.0,apache-jmeter-2.5.1" param="jmeter" delimiter="," target="download_and_repack" />
+		<foreach list="apache-jmeter-2.10,apache-jmeter-2.11,apache-jmeter-2.12,apache-jmeter-2.13,apache-jmeter-2.6,apache-jmeter-2.7,apache-jmeter-2.8,apache-jmeter-2.9,apache-jmeter-3.0" param="jmeter" delimiter="," target="download_and_repack" />
 	</target>
 
 	<target name="download_and_repack">
