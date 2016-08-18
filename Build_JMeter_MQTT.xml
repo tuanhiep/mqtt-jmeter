@@ -53,5 +53,6 @@
 		<jar destfile="libs/${jmeter}_new/ApacheJMeter_core.jar" manifest="libs/${jmeter}/work_dir/META-INF/MANIFEST.MF" basedir="libs/${jmeter}/work_dir" />
 		<copy file="target/mqtt-jmeter-jar-with-dependencies.jar" todir="libs/${jmeter}_new" overwrite="true" />
 		<delete dir="libs/${jmeter}/" />
+		<move file="libs/${jmeter}_new" tofile="libs/${jmeter}"/>
 	</target>
 </project>
