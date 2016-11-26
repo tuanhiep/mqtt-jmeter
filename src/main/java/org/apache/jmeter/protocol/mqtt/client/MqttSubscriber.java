@@ -26,6 +26,8 @@ import java.io.Serializable;
 import java.net.URISyntaxException;
 import java.util.Random;
 
+import javax.net.ssl.SSLContext;
+
 import org.apache.jmeter.config.Arguments;
 import org.apache.jmeter.protocol.java.sampler.AbstractJavaSamplerClient;
 import org.apache.jmeter.protocol.java.sampler.JavaSamplerContext;
@@ -85,12 +87,12 @@ public class MqttSubscriber extends AbstractJavaSamplerClient implements
 				setupTest(host, clientId, topic, context.getParameter("USER"),
 						context.getParameter("PASSWORD"), 1,
 						Boolean.parseBoolean(context.getParameter("DURABLE")),
-						context.getParameter("QOS"),context.getParameter("STRATEGY"));
+						context.getParameter("QOS"),context.getParameter("STRATEGY"), context.getIntParameter("KEEP_ALIVE"));
 				
 			} else {
 				setupTest(host, clientId, topic, 1,
 						Boolean.parseBoolean(context.getParameter("DURABLE")),
-						context.getParameter("QOS"),context.getParameter("STRATEGY"));
+						context.getParameter("QOS"),context.getParameter("STRATEGY"), context.getIntParameter("KEEP_ALIVE"));
 			}
 		} else if ("TRUE".equals(context.getParameter("PER_TOPIC"))) {
 			String topics = context.getParameter("TOPIC");
@@ -100,18 +102,18 @@ public class MqttSubscriber extends AbstractJavaSamplerClient implements
 				setupTest(host, clientId, topics, context.getParameter("USER"),
 						context.getParameter("PASSWORD"), size,
 						Boolean.parseBoolean(context.getParameter("DURABLE")),
-						context.getParameter("QOS"),context.getParameter("STRATEGY"));
+						context.getParameter("QOS"),context.getParameter("STRATEGY"), context.getIntParameter("KEEP_ALIVE"));
 			} else {
 				setupTest(host, clientId, topics, size,
 						Boolean.parseBoolean(context.getParameter("DURABLE")),
-						context.getParameter("QOS"),context.getParameter("STRATEGY"));
+						context.getParameter("QOS"),context.getParameter("STRATEGY"), context.getIntParameter("KEEP_ALIVE"));
 			}
 		}
 	}
 
 	private void setupTest(String host, String clientId, String topic,
 			String user, String password, int size, boolean durable,
-			String quality,String strategy) {
+			String quality,String strategy, int keepAlive) {
 		try {
 			// Quality
 			QoS qos = null;
@@ -128,7 +130,7 @@ public class MqttSubscriber extends AbstractJavaSamplerClient implements
 			JMeterContext jmcx = JMeterContextService.getContext();
 			if (size == 1) {
 				this.connectionArray[0] = createConnection(host, clientId
-						+ jmcx.getThreadNum(), durable, user, password);
+						+ jmcx.getThreadNum(), durable, user, password, keepAlive);
 				this.lisenters[0] = new ListenerforSubscribe();
 				this.connectionArray[0].listener(this.lisenters[0]);
 				CallbackforSubscribe cbs = new CallbackforSubscribe();
@@ -141,7 +143,7 @@ public class MqttSubscriber extends AbstractJavaSamplerClient implements
 				if("ROUND_ROBIN".equals(strategy)){
 					for (int j = 0; j < size; j++) {
 						this.connectionArray[j] = createConnection(host, clientId
-								+ jmcx.getThreadNum() + j, durable, user, password);
+								+ jmcx.getThreadNum() + j, durable, user, password, keepAlive);
 						this.lisenters[j] = new ListenerforSubscribe();
 						this.connectionArray[j].listener(this.lisenters[j]);
 						CallbackforSubscribe cbs = new CallbackforSubscribe();
@@ -157,7 +159,7 @@ public class MqttSubscriber extends AbstractJavaSamplerClient implements
 					String[] topicArray = topic.split("\\s*,\\s*");
 					int  r = rand.nextInt(size);
 					this.connectionArray[r] = createConnection(host, clientId
-							+ jmcx.getThreadNum() + r, durable, user, password);
+							+ jmcx.getThreadNum() + r, durable, user, password, keepAlive);
 					this.lisenters[r] = new ListenerforSubscribe();
 					this.connectionArray[r].listener(this.lisenters[r]);
 					CallbackforSubscribe cbs = new CallbackforSubscribe();
@@ -174,7 +176,7 @@ public class MqttSubscriber extends AbstractJavaSamplerClient implements
 	}
 
 	private void setupTest(String host, String clientId, String topic,
-			int size, boolean durable, String quality,String strategy) {
+			int size, boolean durable, String quality,String strategy, int keepAlive) {
 		try {
 			// Quality
 			QoS qos = null;
@@ -190,7 +192,7 @@ public class MqttSubscriber extends AbstractJavaSamplerClient implements
 			JMeterContext jmcx = JMeterContextService.getContext();
 			if (size == 1) {
 				this.connectionArray[0] = createConnection(host, clientId
-						+ jmcx.getThreadNum(), durable);
+						+ jmcx.getThreadNum(), durable, keepAlive);
 				this.lisenters[0] = new ListenerforSubscribe();
 				this.connectionArray[0].listener(this.lisenters[0]);
 				CallbackforSubscribe cbs = new CallbackforSubscribe();
@@ -202,7 +204,7 @@ public class MqttSubscriber extends AbstractJavaSamplerClient implements
 				if("ROUND_ROBIN".equals(strategy)){
 				for (int j = 0; j < size; j++) {
 					this.connectionArray[j] = createConnection(host, clientId
-							+ jmcx.getThreadNum() + j, durable);
+							+ jmcx.getThreadNum() + j, durable, keepAlive);
 					this.lisenters[j] = new ListenerforSubscribe();
 					this.connectionArray[j].listener(this.lisenters[j]);
 					CallbackforSubscribe cbs = new CallbackforSubscribe();
@@ -215,7 +217,7 @@ public class MqttSubscriber extends AbstractJavaSamplerClient implements
 					int  r = rand.nextInt(size);
 					String[] topicArray = topic.split("\\s*,\\s*");
 					this.connectionArray[r] = createConnection(host, clientId
-							+ jmcx.getThreadNum() + r, durable);
+							+ jmcx.getThreadNum() + r, durable, keepAlive);
 					this.lisenters[r] = new ListenerforSubscribe();
 					this.connectionArray[r].listener(this.lisenters[r]);
 					CallbackforSubscribe cbs = new CallbackforSubscribe();
@@ -231,17 +233,24 @@ public class MqttSubscriber extends AbstractJavaSamplerClient implements
 	}
 
 	private CallbackConnection createConnection(String host, String clientId,
-			boolean durable) throws URISyntaxException {
+			boolean durable, int keepAlive) throws URISyntaxException {
 
 		MQTT client = new MQTT();
 		client.setHost(host);
 		client.setClientId(clientId);
 		client.setCleanSession(!durable);
+		client.setKeepAlive((short) keepAlive);
+		if(host != null && (host.trim().toLowerCase().startsWith("ssl://"))) {
+			SSLContext context = SSLUtil.getContext();
+			if(context != null) {
+				client.setSslContext(context);	
+			}
+		}
 		return client.callbackConnection();
 	}
 
 	private CallbackConnection createConnection(String host, String clientId,
-			boolean durable, String user, String password)
+			boolean durable, String user, String password, int keepAlive)
 			throws URISyntaxException {
 		MQTT client = new MQTT();
 		client.setHost(host);
@@ -249,6 +258,14 @@ public class MqttSubscriber extends AbstractJavaSamplerClient implements
 		client.setUserName(user);
 		client.setPassword(password);
 		client.setCleanSession(!durable);
+		System.out.println("KeepAlive:" + keepAlive);
+		client.setKeepAlive((short) keepAlive);
+		if(host != null && (host.trim().toLowerCase().startsWith("ssl://"))) {
+			SSLContext context = SSLUtil.getContext();
+			if(context != null) {
+				client.setSslContext(context);	
+			}
+		}
 		return client.callbackConnection();
 	}
 	

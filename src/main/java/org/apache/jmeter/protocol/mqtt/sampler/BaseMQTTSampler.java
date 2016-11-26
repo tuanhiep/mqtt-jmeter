@@ -33,6 +33,7 @@ public abstract class BaseMQTTSampler extends AbstractSampler {
     private static final String PRINCIPAL = "mqtt.security_principle"; // $NON-NLS-1$
     private static final String CREDENTIALS = "mqtt.security_credentials"; // $NON-NLS-1$
     private static final String ITERATIONS = "mqtt.iterations"; // $NON-NLS-1$
+    private static final String KEEPALIVE = "mqtt.keep_alive"; // $NON-NLS-1$
     private static final String USE_AUTH = "mqtt.authenticate"; // $NON-NLS-1$
     private static final String REQUIRED = JMeterUtils.getResString("mqtt_auth_required"); // $NON-NLS-1$
  
@@ -135,6 +136,23 @@ public abstract class BaseMQTTSampler extends AbstractSampler {
         return getPropertyAsString(ITERATIONS);
     }
     
+    
+    public void setKeepAlive(String alive) {
+    	setProperty(KEEPALIVE, alive);
+    }
+    
+    public int getKeepAlive() {
+    	int defaultKeepAlive = 60; // in seconds
+    	String alive = getPropertyAsString(KEEPALIVE);
+    	if(alive == null || "".equals(alive.trim())) {
+    		return defaultKeepAlive;
+    	}
+    	try {
+    		return Integer.parseInt(alive);	
+    	}catch(Exception ex) {
+    		return defaultKeepAlive;
+    	}
+    }
     /**
      * return the number of iterations as int instead of string
      *

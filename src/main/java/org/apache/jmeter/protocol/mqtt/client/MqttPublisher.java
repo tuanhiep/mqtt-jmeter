@@ -33,6 +33,8 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicInteger;
 
+import javax.net.ssl.SSLContext;
+
 import org.apache.commons.codec.binary.Base64;
 import org.apache.commons.codec.binary.BinaryCodec;
 import org.apache.commons.codec.binary.Hex;
@@ -81,9 +83,9 @@ public class MqttPublisher extends AbstractJavaSamplerClient implements
 		}
 		if ("FALSE".equals(context.getParameter("PER_TOPIC"))) {
 			if ("TRUE".equals(context.getParameter("AUTH"))) {
-				setupTest(host, clientId, context.getParameter("USER"), context.getParameter("PASSWORD"), 1);
+				setupTest(host, clientId, context.getParameter("USER"), context.getParameter("PASSWORD"), 1, context.getIntParameter("KEEP_ALIVE"));
 			} else {
-				setupTest(host, clientId, 1);
+				setupTest(host, clientId, 1, context.getIntParameter("KEEP_ALIVE"));
 			}
 
 		} else if ("TRUE".equals(context.getParameter("PER_TOPIC"))) {
@@ -92,26 +94,26 @@ public class MqttPublisher extends AbstractJavaSamplerClient implements
 			int size = topicArray.length;
 
 			if ("TRUE".equals(context.getParameter("AUTH"))) {
-				setupTest(host, clientId, context.getParameter("USER"), context.getParameter("PASSWORD"), size);
+				setupTest(host, clientId, context.getParameter("USER"), context.getParameter("PASSWORD"), size, context.getIntParameter("KEEP_ALIVE"));
 			} else {
-				setupTest(host, clientId, size);
+				setupTest(host, clientId, size, context.getIntParameter("KEEP_ALIVE"));
 			}
 		}
 	}
 
-	public void setupTest(String host, String clientId, int size) {
+	public void setupTest(String host, String clientId, int size, int keepAlive) {
 		try {
 			JMeterContext jmcx = JMeterContextService.getContext();
 			this.connectionArray= new FutureConnection[size];
 			if(size==1){
-				this.connectionArray[0]= createConnection(host,clientId+jmcx.getThreadNum());
+				this.connectionArray[0]= createConnection(host,clientId+jmcx.getThreadNum(), keepAlive);
 				this.connectionArray[0].connect().await(MQTT_CONNECTION_TIMEOUT, TimeUnit.SECONDS);
 				this.getLogger().info("NUMBER CONNECTION: "+PublisherSampler.numberOfConnection.getAndIncrement());
 			}
 			else 
 			{				
 				for(int i = 0;i< size;i++){
-					this.connectionArray[i]= createConnection(host,clientId+jmcx.getThreadNum()+i);
+					this.connectionArray[i]= createConnection(host,clientId+jmcx.getThreadNum()+i, keepAlive);
 					this.connectionArray[0].connect().await(MQTT_CONNECTION_TIMEOUT, TimeUnit.SECONDS);
 					this.getLogger().info("NUMBER CONNECTION: "+PublisherSampler.numberOfConnection.getAndIncrement());
 				}
@@ -124,19 +126,19 @@ public class MqttPublisher extends AbstractJavaSamplerClient implements
 		}
 		
 	}
-	public void setupTest(String host, String clientId, String user, String password, int size) {
+	public void setupTest(String host, String clientId, String user, String password, int size, int keepAlive) {
 		try {
 			JMeterContext jmcx = JMeterContextService.getContext();
 			this.connectionArray= new FutureConnection[size];
 			
 			if(size==1){
-				this.connectionArray[0]= createConnection(host,clientId+jmcx.getThreadNum(),user,password);
+				this.connectionArray[0]= createConnection(host,clientId+jmcx.getThreadNum(),user,password, keepAlive);
 				this.connectionArray[0].connect().await(MQTT_CONNECTION_TIMEOUT, TimeUnit.SECONDS);
 				this.getLogger().info("NUMBER CONNECTION: "+PublisherSampler.numberOfConnection.getAndIncrement());
 				
 			} else {
 				for(int i = 0;i< size;i++){
-					this.connectionArray[i]= createConnection(host,clientId+jmcx.getThreadNum()+i,user,password);
+					this.connectionArray[i]= createConnection(host,clientId+jmcx.getThreadNum()+i,user,password, keepAlive);
 					this.connectionArray[0].connect().await(MQTT_CONNECTION_TIMEOUT, TimeUnit.SECONDS);
 					this.getLogger().info("NUMBER CONNECTION: "+PublisherSampler.numberOfConnection.getAndIncrement());
 				 }
@@ -149,11 +151,18 @@ public class MqttPublisher extends AbstractJavaSamplerClient implements
 		}
 	}
 
-	private FutureConnection createConnection(String host,String clientId) {
+	private FutureConnection createConnection(String host,String clientId, int keepAlive) {
 		try {
 			MQTT client = new MQTT();
 			client.setHost(host);
 			client.setClientId(clientId);
+			client.setKeepAlive((short) keepAlive);
+			if(host != null && (host.trim().toLowerCase().startsWith("ssl://"))) {
+				SSLContext context = SSLUtil.getContext();
+				if(context != null) {
+					client.setSslContext(context);	
+				}
+			}
 			return client.futureConnection();
 		} catch (URISyntaxException e) {
 			getLogger().error(e.getMessage());
@@ -161,7 +170,7 @@ public class MqttPublisher extends AbstractJavaSamplerClient implements
 		}
 
 	}
-	private FutureConnection createConnection(String host,String clientId,String user, String password) {
+	private FutureConnection createConnection(String host,String clientId,String user, String password, int keepAlive) {
 
 		try {
 			MQTT client = new MQTT();
@@ -169,6 +178,14 @@ public class MqttPublisher extends AbstractJavaSamplerClient implements
 			client.setUserName(user);
 			client.setPassword(password);
 			client.setClientId(clientId);
+			client.setKeepAlive((short) keepAlive);
+			
+			if(host != null && (host.trim().toLowerCase().startsWith("ssl://"))) {
+				SSLContext context = SSLUtil.getContext();
+				if(context != null) {
+					client.setSslContext(context);	
+				}
+			}
 			return client.futureConnection();
 		} catch (URISyntaxException e) {
 			getLogger().error(e.getMessage());
