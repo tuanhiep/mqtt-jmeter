@@ -71,6 +71,8 @@ public class ConnectionSampler extends AbstractJavaSamplerClient implements Inte
 			mqtt.setKeepAlive((short) keepAlive);
 			String clientId = generateClientId(context.getParameter(CLIENT_ID_PREFIX));
 			mqtt.setClientId(clientId);
+			mqtt.setConnectAttemptsMax(0);
+			mqtt.setReconnectAttemptsMax(0);
 			
 			connection = mqtt.futureConnection();
 			
