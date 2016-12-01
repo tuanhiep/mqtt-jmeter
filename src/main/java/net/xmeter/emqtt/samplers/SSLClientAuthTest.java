@@ -157,8 +157,8 @@ public class SSLClientAuthTest extends AbstractJavaSamplerClient implements Inte
 		String CA_KEYSTORE_PASS = "123456";
 		String CLIENT_KEYSTORE_PASS = "123456";
 		
-		InputStream is_cacert = SSLClientAuthTest.class.getResourceAsStream("cacert.jks");
-		InputStream is_client = SSLClientAuthTest.class.getResourceAsStream("client.p12");
+		InputStream is_cacert = SSLClientAuthTest.class.getResourceAsStream("/cacert.jks");
+		InputStream is_client = SSLClientAuthTest.class.getResourceAsStream("/client.p12");
 
 		KeyStore tks = KeyStore.getInstance(KeyStore.getDefaultType()); // jks
 		tks.load(is_cacert, CA_KEYSTORE_PASS.toCharArray());
@@ -175,8 +175,8 @@ public class SSLClientAuthTest extends AbstractJavaSamplerClient implements Inte
 		FutureConnection connection = null;
 		mqtt.setSslContext(sslcontext);
 		
-		mqtt.setHost("ssl://10.211.55.5:8883");
-		//mqtt.setHost("ssl://139.198.5.215:8883");
+		//mqtt.setHost("ssl://10.211.55.5:8883");
+		mqtt.setHost("ssl://139.198.5.215:8883");
 		mqtt.setKeepAlive((short) 5);
 		String clientId = generateClientId("myClientId");
 		mqtt.setClientId(clientId);
