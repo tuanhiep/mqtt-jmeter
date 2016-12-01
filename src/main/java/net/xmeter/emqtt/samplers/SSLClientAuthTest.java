@@ -3,6 +3,7 @@ package net.xmeter.emqtt.samplers;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.InputStream;
+import java.net.URL;
 import java.security.KeyStore;
 import java.security.SecureRandom;
 import java.security.cert.X509Certificate;
@@ -30,7 +31,7 @@ import org.fusesource.mqtt.client.MQTT;
 import org.fusesource.mqtt.client.QoS;
 import org.fusesource.mqtt.client.Topic;
 
-public class ConnectionSampler extends AbstractJavaSamplerClient implements Interruptible/*, TestStateListener */{
+public class SSLClientAuthTest extends AbstractJavaSamplerClient implements Interruptible/*, TestStateListener */{
 	private static final String SERVER = "SERVER";
 	private static final String PORT = "PORT";
 	private static final String KEEP_ALIVE = "KEEP_ALIVE";
@@ -38,27 +39,24 @@ public class ConnectionSampler extends AbstractJavaSamplerClient implements Inte
 	private static final String CONN_TIMEOUT = "CONN_TIMEOUT　";
 	
 	private static final String CONN_ELAPSED_TIME = "CONN_ELAPSED_TIME";
-	private static final String CONN_CLIENT_AUTH = "CONN_CLIENT_AUTH";
-	
 	private static final int MAX_CLIENT_ID_LENGTH = 23;
 	private MQTT mqtt = new MQTT();
 	private FutureConnection connection = null;
 	private int elpasedTime;
 	private static AtomicBoolean sleepFlag = new AtomicBoolean(false);
-	public ConnectionSampler() {
+	public SSLClientAuthTest() {
 		//StandardJMeterEngine.register(this);
 	}
 	
 	@Override
 	public Arguments getDefaultParameters() {
 		Arguments defaultParameters = new Arguments();
-		defaultParameters.addArgument(SERVER, "tcp://10.91.41.18");
+		defaultParameters.addArgument(SERVER, "tcp://10.91.41.81");
 		defaultParameters.addArgument(PORT, "1883");
 		defaultParameters.addArgument(KEEP_ALIVE, "5");
 		defaultParameters.addArgument(CLIENT_ID_PREFIX, "xmeter_emqtt");
 		defaultParameters.addArgument(CONN_TIMEOUT, "10");
 		defaultParameters.addArgument(CONN_ELAPSED_TIME, "60");
-		defaultParameters.addArgument(CONN_CLIENT_AUTH, "false");
 		return defaultParameters;
 	}
 	
@@ -74,7 +72,7 @@ public class ConnectionSampler extends AbstractJavaSamplerClient implements Inte
 		try {
 			
 			if(serverAddr != null && (serverAddr.trim().toLowerCase().startsWith("ssl://"))) {
-				mqtt.setSslContext(getContext("true".equals(context.getParameter(CONN_CLIENT_AUTH, "false"))));
+				mqtt.setSslContext(getContext());
 			}
 			mqtt.setHost(serverAddr + ":" + port);
 			mqtt.setKeepAlive((short) keepAlive);
@@ -116,40 +114,20 @@ public class ConnectionSampler extends AbstractJavaSamplerClient implements Inte
 		return prefix + post;
 	}
 	
-	private static SSLContext getContext(boolean clientAuth) throws Exception {
-		if (!clientAuth) {
-			SSLContext sslContext = SSLContext.getInstance("TLSv1.2");
-			sslContext.init(null, new TrustManager[] { new X509TrustManager() {
-				public X509Certificate[] getAcceptedIssuers() {
-					return null;
-				}
-	
-				public void checkClientTrusted(X509Certificate[] certs, String authType) {
-				}
-	
-				public void checkServerTrusted(X509Certificate[] certs, String authType) {
-				}
-			} }, new SecureRandom());
-			return sslContext;
-		} else {
-			String CA_KEYSTORE_PASS = "123456";
-			String CLIENT_KEYSTORE_PASS = "123456";
-			
-			InputStream is_cacert = SSLClientAuthTest.class.getResourceAsStream("cacert.jks");
-			InputStream is_client = SSLClientAuthTest.class.getResourceAsStream("client.p12");
+	private static SSLContext getContext() throws Exception {
+		SSLContext sslContext = SSLContext.getInstance("TLSv1.2");
+		sslContext.init(null, new TrustManager[] { new X509TrustManager() {
+			public X509Certificate[] getAcceptedIssuers() {
+				return null;
+			}
 
-			KeyStore tks = KeyStore.getInstance(KeyStore.getDefaultType()); // jks
-			tks.load(is_cacert, CA_KEYSTORE_PASS.toCharArray());
+			public void checkClientTrusted(X509Certificate[] certs, String authType) {
+			}
 
-			KeyStore cks = KeyStore.getInstance("PKCS12");
-			cks.load(is_client, CLIENT_KEYSTORE_PASS.toCharArray());
-
-			SSLContext sslContext = SSLContexts.custom()
-						.loadTrustMaterial(tks, new TrustSelfSignedStrategy()) // use it to customize
-			            .loadKeyMaterial(cks, CLIENT_KEYSTORE_PASS.toCharArray()) // load client certificate
-			            .build();
-			return sslContext;
-		}
+			public void checkServerTrusted(X509Certificate[] certs, String authType) {
+			}
+		} }, new SecureRandom());
+		return sslContext;
 	}
 	
 	@Override
@@ -175,6 +153,50 @@ public class ConnectionSampler extends AbstractJavaSamplerClient implements Inte
 		return true;
 	}
 
+	public static void main(String[] args) throws Exception {
+		String CA_KEYSTORE_PASS = "123456";
+		String CLIENT_KEYSTORE_PASS = "123456";
+		
+		InputStream is_cacert = SSLClientAuthTest.class.getResourceAsStream("cacert.jks");
+		InputStream is_client = SSLClientAuthTest.class.getResourceAsStream("client.p12");
+
+		KeyStore tks = KeyStore.getInstance(KeyStore.getDefaultType()); // jks
+		tks.load(is_cacert, CA_KEYSTORE_PASS.toCharArray());
+
+		KeyStore cks = KeyStore.getInstance("PKCS12");
+		cks.load(is_client, CLIENT_KEYSTORE_PASS.toCharArray());
+
+		SSLContext sslcontext = SSLContexts.custom()
+					.loadTrustMaterial(tks, new TrustSelfSignedStrategy()) // use it to customize
+		            .loadKeyMaterial(cks, CLIENT_KEYSTORE_PASS.toCharArray()) // load client certificate
+		            .build();
+		   
+		MQTT mqtt = new MQTT();
+		FutureConnection connection = null;
+		mqtt.setSslContext(sslcontext);
+		
+		mqtt.setHost("ssl://10.211.55.5:8883");
+		//mqtt.setHost("ssl://139.198.5.215:8883");
+		mqtt.setKeepAlive((short) 5);
+		String clientId = generateClientId("myClientId");
+		mqtt.setClientId(clientId);
+		mqtt.setConnectAttemptsMax(0);
+		mqtt.setReconnectAttemptsMax(0);
+			
+		connection = mqtt.futureConnection();
+			System.out.println("will connect..");
+		Future<Void> f1 = connection.connect();
+		f1.await(30, TimeUnit.SECONDS);
+			
+		Topic[] topics = {new Topic("topic_"+ clientId, QoS.AT_LEAST_ONCE)};
+			System.out.println("will subscribe topic..");
+		connection.subscribe(topics);
+			System.out.println("will disconnect..");
+		connection.disconnect();
+		
+		
+		
+	}
 //	@Override
 //	public void testEnded() {
 //		getLogger().info(MessageFormat.format("Received end message {0}.", Thread.currentThread().getName()));
