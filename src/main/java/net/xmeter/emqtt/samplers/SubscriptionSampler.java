@@ -1,5 +1,8 @@
 package net.xmeter.emqtt.samplers;
 
+import java.io.ByteArrayOutputStream;
+import java.io.IOException;
+import java.io.StringWriter;
 import java.text.MessageFormat;
 import java.util.ArrayList;
 import java.util.List;
@@ -35,7 +38,7 @@ public class SubscriptionSampler extends AbstractJavaSamplerClient implements Co
 	private Object lock = new Object();
 	
 	private String connAuth = "false";
-
+	private int qos = QOS_0;
 	@Override
 	public Arguments getDefaultParameters() {
 		Arguments defaultParameters = new Arguments();
@@ -70,15 +73,22 @@ public class SubscriptionSampler extends AbstractJavaSamplerClient implements Co
 			connection.listener(new Listener() {
 				@Override
 				public void onPublish(UTF8Buffer topic, Buffer body, Runnable ack) {
-					String message = new String(body.data);
-					synchronized (lock) {
-						if(debugResponse) {
-							contents.add(message);
+					try {
+						ByteArrayOutputStream baos = new ByteArrayOutputStream();
+						body.writeTo(baos);
+						String msg = baos.toString();
+						synchronized (lock) {
+							if(debugResponse) {
+								contents.add(msg);
+							}
+							receivedMessageSize += msg.length();
+							receivedCount++;
 						}
-						receivedMessageSize += message.length();
-						receivedCount++;
+						ack.run();
+					} catch (IOException e) {
+						e.printStackTrace();
 					}
-					ack.run();
+					
 				}
 				@Override
 				public void onFailure(Throwable value) {
@@ -96,7 +106,15 @@ public class SubscriptionSampler extends AbstractJavaSamplerClient implements Co
 			connection.connect(new Callback<Void>() {
 				@Override
 				public void onSuccess(Void value) {
-					Topic[] topics = {new Topic(topicName, QoS.AT_LEAST_ONCE)};
+					Topic[] topics = new Topic[1];
+					if(qos == QOS_0) {
+						topics[0] = new Topic(topicName, QoS.AT_MOST_ONCE);	
+					} else if(qos == QOS_1) {
+						topics[0] = new Topic(topicName, QoS.AT_LEAST_ONCE);
+					} else {
+						topics[0] = new Topic(topicName, QoS.EXACTLY_ONCE);
+					}
+					
 					connection.subscribe(topics, new Callback<byte[]>() {
 						@Override
 						public void onSuccess(byte[] value) {
@@ -127,6 +145,9 @@ public class SubscriptionSampler extends AbstractJavaSamplerClient implements Co
 		String clientId = Util.generateClientId(context.getParameter(CLIENT_ID_PREFIX));
 		String topicName = context.getParameter(TOPIC_NAME);
 		this.connAuth = context.getParameter(CONN_CLIENT_AUTH, "false");
+		String qos = context.getParameter(QOS_LEVEL, String.valueOf(QOS_0));
+		this.qos = Integer.parseInt(qos);
+		
 		if(connection == null) {
 			createCallbackConn(serverAddr, port, keepAlive, clientId, topicName);			
 		}
