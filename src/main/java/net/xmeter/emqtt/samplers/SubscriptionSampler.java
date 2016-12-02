@@ -152,10 +152,17 @@ public class SubscriptionSampler extends AbstractJavaSamplerClient implements Co
 					content.append(contents.get(i) + " \n");
 				}	
 			}
+			//System.out.println(MessageFormat.format("receivedMessageSize {0} with receivedCount {1}.", receivedMessageSize, receivedCount));
+			int avgSize = 0;
+			if(receivedCount != 0) {
+				avgSize = receivedMessageSize / receivedCount;
+			}
+			result = fillOKResult(result, avgSize, message, content.toString());
+			
 			receivedMessageSize = 0;
 			receivedCount = 0;
 			contents.clear();
-			return fillOKResult(result, receivedMessageSize, message, content.toString());
+			return result;
 		}
 	}
 	
@@ -172,6 +179,7 @@ public class SubscriptionSampler extends AbstractJavaSamplerClient implements Co
 		result.setResponseCode("200");
 		result.setSuccessful(true);
 		result.setResponseMessage(message);
+		result.setBodySize(size);
 		result.setBytes(size);
 		result.setResponseData(contents.getBytes());
 		return result;
