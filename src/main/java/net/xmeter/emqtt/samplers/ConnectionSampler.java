@@ -1,27 +1,12 @@
 package net.xmeter.emqtt.samplers;
 
-import java.io.File;
-import java.io.FileInputStream;
-import java.io.InputStream;
-import java.security.KeyStore;
-import java.security.SecureRandom;
-import java.security.cert.X509Certificate;
 import java.text.MessageFormat;
-import java.util.Iterator;
-import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 
-import javax.net.ssl.SSLContext;
-import javax.net.ssl.TrustManager;
-import javax.net.ssl.X509TrustManager;
-
-import org.apache.http.conn.ssl.TrustSelfSignedStrategy;
-import org.apache.http.ssl.SSLContexts;
 import org.apache.jmeter.config.Arguments;
 import org.apache.jmeter.protocol.java.sampler.AbstractJavaSamplerClient;
 import org.apache.jmeter.protocol.java.sampler.JavaSamplerContext;
-import org.apache.jmeter.samplers.Interruptible;
 import org.apache.jmeter.samplers.SampleResult;
 import org.apache.log.Priority;
 import org.fusesource.mqtt.client.Future;
@@ -30,23 +15,12 @@ import org.fusesource.mqtt.client.MQTT;
 import org.fusesource.mqtt.client.QoS;
 import org.fusesource.mqtt.client.Topic;
 
-public class ConnectionSampler extends AbstractJavaSamplerClient implements Interruptible/*, TestStateListener */{
-	private static final String SERVER = "SERVER";
-	private static final String PORT = "PORT";
-	private static final String KEEP_ALIVE = "KEEP_ALIVE";
-	private static final String CLIENT_ID_PREFIX = "CLIENT_ID_PREFIX";
-	private static final String CONN_TIMEOUT = "CONN_TIMEOUT　";
-	
-	private static final String CONN_ELAPSED_TIME = "CONN_ELAPSED_TIME";
-	private static final String CONN_CLIENT_AUTH = "CONN_CLIENT_AUTH";
-	
-	private static final int MAX_CLIENT_ID_LENGTH = 23;
+public class ConnectionSampler extends AbstractJavaSamplerClient implements Constants{
 	private MQTT mqtt = new MQTT();
 	private FutureConnection connection = null;
 	private int elpasedTime;
 	private static AtomicBoolean sleepFlag = new AtomicBoolean(false);
 	public ConnectionSampler() {
-		//StandardJMeterEngine.register(this);
 	}
 	
 	@Override
@@ -74,11 +48,11 @@ public class ConnectionSampler extends AbstractJavaSamplerClient implements Inte
 		try {
 			
 			if(serverAddr != null && (serverAddr.trim().toLowerCase().startsWith("ssl://"))) {
-				mqtt.setSslContext(getContext("true".equals(context.getParameter(CONN_CLIENT_AUTH, "false"))));
+				mqtt.setSslContext(Util.getContext("true".equals(context.getParameter(CONN_CLIENT_AUTH, "false"))));
 			}
 			mqtt.setHost(serverAddr + ":" + port);
 			mqtt.setKeepAlive((short) keepAlive);
-			String clientId = generateClientId(context.getParameter(CLIENT_ID_PREFIX));
+			String clientId = Util.generateClientId(context.getParameter(CLIENT_ID_PREFIX));
 			mqtt.setClientId(clientId);
 			mqtt.setConnectAttemptsMax(0);
 			mqtt.setReconnectAttemptsMax(0);
@@ -107,51 +81,6 @@ public class ConnectionSampler extends AbstractJavaSamplerClient implements Inte
 		return result;
 	}
 	
-	private static String generateClientId(String prefix) {
-		int leng = prefix.length();
-		int postLeng = MAX_CLIENT_ID_LENGTH - leng;
-		UUID uuid = UUID.randomUUID();
-		String string = uuid.toString().replace("-", "");
-		String post = string.substring(0, postLeng);
-		return prefix + post;
-	}
-	
-	private static SSLContext getContext(boolean clientAuth) throws Exception {
-		if (!clientAuth) {
-			SSLContext sslContext = SSLContext.getInstance("TLSv1.2");
-			sslContext.init(null, new TrustManager[] { new X509TrustManager() {
-				public X509Certificate[] getAcceptedIssuers() {
-					return null;
-				}
-	
-				public void checkClientTrusted(X509Certificate[] certs, String authType) {
-				}
-	
-				public void checkServerTrusted(X509Certificate[] certs, String authType) {
-				}
-			} }, new SecureRandom());
-			return sslContext;
-		} else {
-			String CA_KEYSTORE_PASS = "123456";
-			String CLIENT_KEYSTORE_PASS = "123456";
-			
-			InputStream is_cacert = SSLClientAuthTest.class.getResourceAsStream("cacert.jks");
-			InputStream is_client = SSLClientAuthTest.class.getResourceAsStream("client.p12");
-
-			KeyStore tks = KeyStore.getInstance(KeyStore.getDefaultType()); // jks
-			tks.load(is_cacert, CA_KEYSTORE_PASS.toCharArray());
-
-			KeyStore cks = KeyStore.getInstance("PKCS12");
-			cks.load(is_client, CLIENT_KEYSTORE_PASS.toCharArray());
-
-			SSLContext sslContext = SSLContexts.custom()
-						.loadTrustMaterial(tks, new TrustSelfSignedStrategy()) // use it to customize
-			            .loadKeyMaterial(cks, CLIENT_KEYSTORE_PASS.toCharArray()) // load client certificate
-			            .build();
-			return sslContext;
-		}
-	}
-	
 	@Override
 	public void teardownTest(JavaSamplerContext context) {
 		try {
@@ -168,47 +97,4 @@ public class ConnectionSampler extends AbstractJavaSamplerClient implements Inte
 			getLogger().log(Priority.ERROR, e.getMessage(), e);
 		}
 	}
-
-	@Override
-	public boolean interrupt() {
-		System.out.println("interrupt");
-		return true;
-	}
-
-//	@Override
-//	public void testEnded() {
-//		getLogger().info(MessageFormat.format("Received end message {0}.", Thread.currentThread().getName()));
-//		try {
-//			
-//			long before = System.currentTimeMillis();
-//			while(true) {
-//				if((System.currentTimeMillis() - before) < elpasedTime) {
-//					TimeUnit.SECONDS.sleep(5);	
-//				} else {
-//					if(connection != null) {
-//						//connection.disconnect();
-//						getLogger().info(MessageFormat.format("Connection {0} disconnected successfully.", connection));
-//						connection = null;
-//					}
-//				}
-//			}
-//		} catch (Exception e) {
-//			getLogger().log(Priority.ERROR, e.getMessage(), e);
-//		}
-//	}
-//
-//	@Override
-//	public void testEnded(String arg0) {
-//		
-//	}
-//
-//	@Override
-//	public void testStarted() {
-//		
-//	}
-//
-//	@Override
-//	public void testStarted(String arg0) {
-//		testStarted();
-//	}
 }
