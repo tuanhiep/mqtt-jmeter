@@ -33,6 +33,8 @@ public class SubscriptionSampler extends AbstractJavaSamplerClient implements Co
 	private boolean debugResponse = false;
 	private List<String> contents = new ArrayList<String>();
 	private Object lock = new Object();
+	
+	private String connAuth = "false";
 
 	@Override
 	public Arguments getDefaultParameters() {
@@ -55,6 +57,12 @@ public class SubscriptionSampler extends AbstractJavaSamplerClient implements Co
 			mqtt.setHost(serverAddr + ":" + port);
 			mqtt.setKeepAlive((short) keepAlive);
 			mqtt.setClientId(clientId);
+			
+			if(serverAddr != null && (serverAddr.trim().toLowerCase().startsWith("ssl://"))) {
+				boolean flag = "true".equals(this.connAuth);
+				getLogger().log(Priority.INFO, "****setSslContext: " + flag);
+				mqtt.setSslContext(Util.getContext(flag));
+			}
 			//To avoid reconnect
 			mqtt.setConnectAttemptsMax(0);
 			mqtt.setReconnectAttemptsMax(0);
@@ -119,6 +127,7 @@ public class SubscriptionSampler extends AbstractJavaSamplerClient implements Co
 		int keepAlive = context.getIntParameter(KEEP_ALIVE);
 		String clientId = Util.generateClientId(context.getParameter(CLIENT_ID_PREFIX));
 		String topicName = context.getParameter(TOPIC_NAME);
+		this.connAuth = context.getParameter(CONN_CLIENT_AUTH, "false");
 		if(connection == null) {
 			createCallbackConn(serverAddr, port, keepAlive, clientId, topicName);			
 		}
