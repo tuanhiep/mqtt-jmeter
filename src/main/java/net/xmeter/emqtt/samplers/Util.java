@@ -43,8 +43,8 @@ public class Util implements Constants{
 			String CA_KEYSTORE_PASS = "123456";
 			String CLIENT_KEYSTORE_PASS = "123456";
 			
-			InputStream is_cacert = SSLClientAuthTest.class.getResourceAsStream("cacert.jks");
-			InputStream is_client = SSLClientAuthTest.class.getResourceAsStream("client.p12");
+			InputStream is_cacert = Util.class.getResourceAsStream("cacert.jks");
+			InputStream is_client = Util.class.getResourceAsStream("client.p12");
 
 			KeyStore tks = KeyStore.getInstance(KeyStore.getDefaultType()); // jks
 			tks.load(is_cacert, CA_KEYSTORE_PASS.toCharArray());
