@@ -28,7 +28,10 @@ public class PublishSampler extends AbstractJavaSamplerClient implements Constan
 	private int keepAlive = 0;
 	private String clientId = null;
 	
+	private int qos = 0;
+	private QoS qos_enum;
 	private int payload_size = 0;
+	private String payload = null;
 	
 	@Override
 	public Arguments getDefaultParameters() {
@@ -63,7 +66,17 @@ public class PublishSampler extends AbstractJavaSamplerClient implements Constan
 		keepAlive = context.getIntParameter(KEEP_ALIVE);
 		elpasedTime = context.getIntParameter(CONN_ELAPSED_TIME);
 		clientId = Util.generateClientId(context.getParameter(CLIENT_ID_PREFIX));
+		qos = context.getIntParameter(QOS_LEVEL);
+		if (qos==0) {
+			qos_enum = QoS.AT_MOST_ONCE;
+		} else if (qos==1) {
+			qos_enum = QoS.AT_LEAST_ONCE;
+		} else if (qos==2) {
+			qos_enum = QoS.EXACTLY_ONCE;
+		}
+		
 		payload_size = context.getIntParameter(PAYLOAD_SIZE);
+		payload = Util.generatePayload(payload_size);
 		
 		try {
 			
@@ -99,9 +112,8 @@ public class PublishSampler extends AbstractJavaSamplerClient implements Constan
 			//Topic[] topics = {new Topic(topicName, QoS.AT_LEAST_ONCE)};
 			//Topic topic= new Topic(topicName, QoS.AT_LEAST_ONCE);
 			
-			String payload = Util.generatePayload(payload_size);
-			Future<Void> f3 = connection.publish(topicName, payload.getBytes(), QoS.AT_LEAST_ONCE, false);
-			f3.await();
+			Future<Void> pub = connection.publish(topicName, payload.getBytes(), qos_enum, false);
+			pub.await();
 			
 			result.sampleEnd(); 
             result.setSuccessful(true);
