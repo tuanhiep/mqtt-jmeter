@@ -60,7 +60,6 @@ public class SubscriptionSampler extends AbstractJavaSamplerClient implements Co
 			
 			if(serverAddr != null && (serverAddr.trim().toLowerCase().startsWith("ssl://"))) {
 				boolean flag = "true".equals(this.connAuth);
-				getLogger().log(Priority.INFO, "****setSslContext: " + flag);
 				mqtt.setSslContext(Util.getContext(flag));
 			}
 			//To avoid reconnect
