@@ -14,6 +14,9 @@ import org.apache.http.conn.ssl.TrustSelfSignedStrategy;
 import org.apache.http.ssl.SSLContexts;
 
 public class Util implements Constants {
+	
+	private static SecureRandom random = new SecureRandom();
+    private static char[] seeds = "abcdefghijklmnopqrstuvwxmy0123456789".toCharArray();
 
 	public static String generateClientId(String prefix) {
 		int leng = prefix.length();
@@ -59,4 +62,13 @@ public class Util implements Constants {
 			return sslContext;
 		}
 	}
+	
+	public static String generatePayload(int size) {
+		StringBuffer res = new StringBuffer();
+		for(int i = 0; i < size; i++) {
+			res.append(seeds[random.nextInt(seeds.length - 1)]);
+		}
+		return res.toString();
+	}
+    
 }
