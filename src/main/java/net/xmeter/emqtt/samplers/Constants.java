@@ -12,6 +12,7 @@ public interface Constants {
 	
 	public static final String TOPIC_NAME = "TOPIC_NAME";
 	public static final String QOS_LEVEL = "QOS_LEVEL";
+	public static final String PAYLOAD_SIZE = "PAYLOAD_SIZE";
 	
 	public static final String DEBUG_RESPONSE = "DEBUG_RESPONSE";
 	

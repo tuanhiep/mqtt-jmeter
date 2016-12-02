@@ -1,36 +1,20 @@
 package net.xmeter.emqtt.samplers;
 
-import java.io.File;
-import java.io.FileInputStream;
-import java.io.InputStream;
-import java.security.KeyStore;
-import java.security.SecureRandom;
-import java.security.cert.X509Certificate;
 import java.text.MessageFormat;
 import java.text.SimpleDateFormat;
 import java.util.Date;
-import java.util.Iterator;
-import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 
-import javax.net.ssl.SSLContext;
-import javax.net.ssl.TrustManager;
-import javax.net.ssl.X509TrustManager;
-
-import org.apache.http.conn.ssl.TrustSelfSignedStrategy;
-import org.apache.http.ssl.SSLContexts;
 import org.apache.jmeter.config.Arguments;
 import org.apache.jmeter.protocol.java.sampler.AbstractJavaSamplerClient;
 import org.apache.jmeter.protocol.java.sampler.JavaSamplerContext;
-import org.apache.jmeter.samplers.Interruptible;
 import org.apache.jmeter.samplers.SampleResult;
 import org.apache.log.Priority;
 import org.fusesource.mqtt.client.Future;
 import org.fusesource.mqtt.client.FutureConnection;
 import org.fusesource.mqtt.client.MQTT;
 import org.fusesource.mqtt.client.QoS;
-import org.fusesource.mqtt.client.Topic;
 
 public class PublishSampler extends AbstractJavaSamplerClient implements Constants /*, TestStateListener */{
 	
@@ -44,6 +28,8 @@ public class PublishSampler extends AbstractJavaSamplerClient implements Constan
 	private int keepAlive = 0;
 	private String clientId = null;
 	
+	private int payload_size = 0;
+	
 	@Override
 	public Arguments getDefaultParameters() {
 		Arguments defaultParameters = new Arguments();
@@ -55,8 +41,8 @@ public class PublishSampler extends AbstractJavaSamplerClient implements Constan
 		defaultParameters.addArgument(CONN_ELAPSED_TIME, "1");
 		defaultParameters.addArgument(CONN_CLIENT_AUTH, "false");
 		defaultParameters.addArgument(QOS_LEVEL, String.valueOf(QOS_0));
-		defaultParameters.addArgument(DEBUG_RESPONSE, "false");
 		defaultParameters.addArgument(TOPIC_NAME, "test");
+		defaultParameters.addArgument(PAYLOAD_SIZE, "256");
 		return defaultParameters;
 	}
 	
@@ -77,6 +63,7 @@ public class PublishSampler extends AbstractJavaSamplerClient implements Constan
 		keepAlive = context.getIntParameter(KEEP_ALIVE);
 		elpasedTime = context.getIntParameter(CONN_ELAPSED_TIME);
 		clientId = Util.generateClientId(context.getParameter(CLIENT_ID_PREFIX));
+		payload_size = context.getIntParameter(PAYLOAD_SIZE);
 		
 		try {
 			
@@ -112,7 +99,8 @@ public class PublishSampler extends AbstractJavaSamplerClient implements Constan
 			//Topic[] topics = {new Topic(topicName, QoS.AT_LEAST_ONCE)};
 			//Topic topic= new Topic(topicName, QoS.AT_LEAST_ONCE);
 			
-			Future<Void> f3 = connection.publish(topicName, "Hello from pub".getBytes(), QoS.AT_LEAST_ONCE, false);
+			String payload = Util.generatePayload(payload_size);
+			Future<Void> f3 = connection.publish(topicName, payload.getBytes(), QoS.AT_LEAST_ONCE, false);
 			f3.await();
 			
 			result.sampleEnd(); 
