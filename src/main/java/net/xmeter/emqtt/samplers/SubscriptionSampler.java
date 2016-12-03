@@ -2,7 +2,6 @@ package net.xmeter.emqtt.samplers;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
-import java.io.StringWriter;
 import java.text.MessageFormat;
 import java.util.ArrayList;
 import java.util.List;
@@ -203,6 +202,7 @@ public class SubscriptionSampler extends AbstractJavaSamplerClient implements Co
 		result.setBodySize(size);
 		result.setBytes(size);
 		result.setResponseData(contents.getBytes());
+		result.sampleEnd();
 		return result;
 	}
 
