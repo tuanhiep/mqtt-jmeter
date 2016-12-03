@@ -166,7 +166,7 @@ public class SubscriptionSampler extends AbstractJavaSamplerClient implements Co
 		}
 		synchronized (lock) {
 			String message = MessageFormat.format("Received {0} of message\n.", receivedCount);
-			getLogger().info(message);
+			//getLogger().info(message);
 			StringBuffer content = new StringBuffer("");
 			if(debugResponse) {
 				for(int i = 0; i < contents.size(); i++) {
