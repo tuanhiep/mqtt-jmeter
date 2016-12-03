@@ -5,7 +5,7 @@ public interface Constants {
 	public static final String PORT = "PORT";
 	public static final String KEEP_ALIVE = "KEEP_ALIVE";
 	public static final String CLIENT_ID_PREFIX = "CLIENT_ID_PREFIX";
-	public static final String CONN_TIMEOUT = "CONN_TIMEOUT　";
+	public static final String CONN_TIMEOUT = "CONN_TIMEOUT";
 	
 	public static final String CONN_ELAPSED_TIME = "CONN_ELAPSED_TIME";
 	public static final String CONN_CLIENT_AUTH = "CONN_CLIENT_AUTH";
