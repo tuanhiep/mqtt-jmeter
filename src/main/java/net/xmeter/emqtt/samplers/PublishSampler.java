@@ -36,10 +36,10 @@ public class PublishSampler extends AbstractJavaSamplerClient implements Constan
 	@Override
 	public Arguments getDefaultParameters() {
 		Arguments defaultParameters = new Arguments();
-		defaultParameters.addArgument(SERVER, "tcp://192.168.10.6");
+		defaultParameters.addArgument(SERVER, "tcp://10.91.41.18");
 		defaultParameters.addArgument(PORT, "1883");
-		defaultParameters.addArgument(KEEP_ALIVE, "5");
-		defaultParameters.addArgument(CLIENT_ID_PREFIX, "xmeter_emqtt");
+		defaultParameters.addArgument(KEEP_ALIVE, "300");
+		defaultParameters.addArgument(CLIENT_ID_PREFIX, "pub_");
 		defaultParameters.addArgument(CONN_TIMEOUT, "10");
 		defaultParameters.addArgument(CONN_ELAPSED_TIME, "1");
 		defaultParameters.addArgument(CONN_CLIENT_AUTH, "false");
@@ -66,7 +66,7 @@ public class PublishSampler extends AbstractJavaSamplerClient implements Constan
 		keepAlive = context.getIntParameter(KEEP_ALIVE);
 		elpasedTime = context.getIntParameter(CONN_ELAPSED_TIME);
 		clientId = Util.generateClientId(context.getParameter(CLIENT_ID_PREFIX));
-		qos = context.getIntParameter(QOS_LEVEL);
+		qos = context.getIntParameter(QOS_LEVEL, 0);
 		if (qos==0) {
 			qos_enum = QoS.AT_MOST_ONCE;
 		} else if (qos==1) {
