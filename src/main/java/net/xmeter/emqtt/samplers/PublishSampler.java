@@ -128,7 +128,7 @@ public class PublishSampler extends AbstractJavaSamplerClient implements Constan
 		try {
 			String topicName = context.getParameter(TOPIC_NAME);
 			long time = System.currentTimeMillis();
-			String pubContent = String.format("%d,%d,%d,%d,%s", dockerNum, threadNum, loopCount++, time, payload);  
+			String pubContent = String.format("%d,%d,%d,%d,%s", dockerNum, threadNum, loopCount, time, payload);  
 			Future<Void> pub = connection.publish(topicName, pubContent.getBytes(), qos_enum, false);
 			pub.await();
 			
@@ -144,6 +144,7 @@ public class PublishSampler extends AbstractJavaSamplerClient implements Constan
 				DataEntryUtil.getInstance(logPacketFilePath).addDataEntries(entries);
 				entries.clear();
 			}
+			loopCount++; // for next loop
 			
 			result.sampleEnd(); 
             result.setSuccessful(true);
