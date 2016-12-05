@@ -34,6 +34,8 @@ public class SubscriptionSampler extends AbstractJavaSamplerClient implements Co
 
 	private boolean debugResponse = false;
 	private List<String> contents = new ArrayList<String>();
+	private List<DataEntry> entries = new ArrayList<DataEntry>();
+	
 	private Object lock = new Object();
 	
 	private String connAuth = "false";
@@ -82,6 +84,10 @@ public class SubscriptionSampler extends AbstractJavaSamplerClient implements Co
 							}
 							receivedMessageSize += msg.length();
 							receivedCount++;
+							DataEntry entry = new DataEntry();
+							entry.setHashCode(msg.hashCode());
+							entry.setTime(System.currentTimeMillis());
+							entries.add(entry);
 						}
 						ack.run();
 					} catch (IOException e) {
@@ -182,6 +188,8 @@ public class SubscriptionSampler extends AbstractJavaSamplerClient implements Co
 			
 			receivedMessageSize = 0;
 			receivedCount = 0;
+			DataEntryUtil.getInstance("/tmp/data.log").addDataEntries(entries);
+			entries.clear();
 			contents.clear();
 			return result;
 		}
