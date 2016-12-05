@@ -81,6 +81,7 @@ public class SubscriptionSampler extends AbstractJavaSamplerClient implements Co
 						ByteArrayOutputStream baos = new ByteArrayOutputStream();
 						body.writeTo(baos);
 						String msg = baos.toString();
+						ack.run();
 						synchronized (lock) {
 							if(debugResponse) {
 								contents.add(msg);
@@ -88,6 +89,7 @@ public class SubscriptionSampler extends AbstractJavaSamplerClient implements Co
 							receivedMessageSize += msg.length();
 							receivedCount++;
 							
+							getLogger().info("Received:" + msg);
 							String[] msgArr = msg.split(",");
 							if(msgArr.length > 4) {
 								DataEntry entry = new DataEntry();
@@ -102,7 +104,6 @@ public class SubscriptionSampler extends AbstractJavaSamplerClient implements Co
 								getLogger().info("Invalid data sent from pub.");
 							}
 						}
-						ack.run();
 					} catch (IOException e) {
 						e.printStackTrace();
 					}
