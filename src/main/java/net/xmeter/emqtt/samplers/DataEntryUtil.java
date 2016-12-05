@@ -18,7 +18,7 @@ public class DataEntryUtil {
 	private static String fileName = "data_entries.log";
 	private Object lock = new Object();
 	private static String hostName;
-	private static String specifiedFullPath = null;
+	private static String foldName = null;
 	private DataEntryUtil() {
 		try {
 			hostName = (InetAddress.getLocalHost()).getHostName();
@@ -37,7 +37,15 @@ public class DataEntryUtil {
 								StringBuffer contents = new StringBuffer();
 								while(it.hasNext()) {
 									DataEntry entry = it.next();
-									contents.append(entry.getTime() + ", " + entry.getDockerNum());
+									contents.append(entry.getElapsedTime());
+									contents.append(",");
+									contents.append(entry.getDockerNum());
+									contents.append(",");
+									contents.append(entry.getThreadNum());
+									contents.append(",");
+									contents.append(entry.getLoopCount());
+									contents.append(",");
+									contents.append(entry.getTime());
 									contents.append("\n");
 								}
 								saveToFile(contents.toString());
@@ -57,11 +65,11 @@ public class DataEntryUtil {
 	private void saveToFile(String contents) {
 		FileOutputStream fileOutputStream = null;
 		try {
-			if(specifiedFullPath == null || "".equals(specifiedFullPath.trim())) {
+			if(foldName == null || "".equals(foldName.trim())) {
 				String fullPath = filePath + hostName + "_" + fileName;
 				fileOutputStream = new FileOutputStream(fullPath, true);	
 			} else {
-				fileOutputStream = new FileOutputStream(specifiedFullPath, true);
+				fileOutputStream = new FileOutputStream(foldName + hostName + "_" + fileName, true);
 			}
 			
 			fileOutputStream.write(contents.getBytes());
@@ -83,11 +91,11 @@ public class DataEntryUtil {
 	 * @param theFullPath: The fullpath of packet log. If the para is null or empty, will use the default path.
 	 * @return
 	 */
-	public static DataEntryUtil getInstance(String theFullPath) {
-		if(theFullPath == null || "".equals(theFullPath.trim())) {
+	public static DataEntryUtil getInstance(String theFoldName) {
+		if(theFoldName == null || "".equals(theFoldName.trim())) {
 			System.out.println("Specified empty data log file name, will use default " + filePath + hostName + "_" + fileName);
 		} else {
-			specifiedFullPath = theFullPath;
+			foldName = theFoldName;
 		}
 		return util;
 	}

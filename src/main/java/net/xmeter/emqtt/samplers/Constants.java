@@ -16,6 +16,8 @@ public interface Constants {
 	
 	public static final String DEBUG_RESPONSE = "DEBUG_RESPONSE";
 	
+	public static final String LOG_PACKET_FILE_FULL_PATH = "LOG_PACKET_FILE_FULL_PATH";
+	
 	public static final int QOS_0 = 0;
 	public static final int QOS_1 = 1;
 	public static final int QOS_2 = 2;

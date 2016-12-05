@@ -40,6 +40,8 @@ public class SubscriptionSampler extends AbstractJavaSamplerClient implements Co
 	
 	private String connAuth = "false";
 	private int qos = QOS_0;
+	
+	private String logPacketFilePath;
 	@Override
 	public Arguments getDefaultParameters() {
 		Arguments defaultParameters = new Arguments();
@@ -53,6 +55,7 @@ public class SubscriptionSampler extends AbstractJavaSamplerClient implements Co
 		defaultParameters.addArgument(QOS_LEVEL, String.valueOf(QOS_0));
 		defaultParameters.addArgument(DEBUG_RESPONSE, "false");
 		defaultParameters.addArgument(TOPIC_NAME, "test");
+		defaultParameters.addArgument(LOG_PACKET_FILE_FULL_PATH, "/home/xmeter/DClogs/");
 		return defaultParameters;
 	}
 
@@ -84,10 +87,20 @@ public class SubscriptionSampler extends AbstractJavaSamplerClient implements Co
 							}
 							receivedMessageSize += msg.length();
 							receivedCount++;
-							DataEntry entry = new DataEntry();
-							//entry.setHashCode(msg.hashCode());
-							entry.setTime(System.currentTimeMillis());
-							entries.add(entry);
+							
+							String[] msgArr = msg.split(",");
+							if(msgArr.length > 4) {
+								DataEntry entry = new DataEntry();
+								entry.setDockerNum(Integer.parseInt(msgArr[0]));
+								entry.setThreadNum(Integer.parseInt(msgArr[1]));
+								entry.setLoopCount(Integer.parseInt(msgArr[2]));
+								long now = System.currentTimeMillis();
+								entry.setTime(now);
+								entry.setElapsedTime(now - Long.parseLong(msgArr[3]));
+								entries.add(entry);	
+							} else {
+								getLogger().info("Invalid data sent from pub.");
+							}
 						}
 						ack.run();
 					} catch (IOException e) {
@@ -152,6 +165,7 @@ public class SubscriptionSampler extends AbstractJavaSamplerClient implements Co
 		this.connAuth = context.getParameter(CONN_CLIENT_AUTH, "false");
 		String qos = context.getParameter(QOS_LEVEL, String.valueOf(QOS_0));
 		this.qos = Integer.parseInt(qos);
+		this.logPacketFilePath = context.getParameter(LOG_PACKET_FILE_FULL_PATH, "/home/xmeter/DClogs/");
 		
 		if(connection == null) {
 			createCallbackConn(serverAddr, port, keepAlive, clientId, topicName);			
@@ -188,7 +202,7 @@ public class SubscriptionSampler extends AbstractJavaSamplerClient implements Co
 			
 			receivedMessageSize = 0;
 			receivedCount = 0;
-			DataEntryUtil.getInstance("/tmp/data.log").addDataEntries(entries);
+			DataEntryUtil.getInstance(logPacketFilePath).addDataEntries(entries);
 			entries.clear();
 			contents.clear();
 			return result;
