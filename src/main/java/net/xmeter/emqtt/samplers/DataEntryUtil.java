@@ -2,6 +2,8 @@ package net.xmeter.emqtt.samplers;
 
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.net.InetAddress;
+import java.net.UnknownHostException;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
@@ -12,12 +14,17 @@ import java.util.concurrent.TimeUnit;
 public class DataEntryUtil {
 	private List<DataEntry> allEntries = new ArrayList<DataEntry>();
 	private static DataEntryUtil util = new DataEntryUtil();
-	private static String filePath = "/home/xmeter/DCLogs/";
+	private static String filePath = "/home/xmeter/DClogs/";
 	private static String fileName = "data_entries.log";
-	private static String fullPath = filePath + fileName;
 	private Object lock = new Object();
-
+	private static String hostName;
+	private static String specifiedFullPath = null;
 	private DataEntryUtil() {
+		try {
+			hostName = (InetAddress.getLocalHost()).getHostName();
+		} catch (UnknownHostException e) {
+			e.printStackTrace();
+		}  
 		ExecutorService service = Executors.newSingleThreadExecutor();
 		service.submit(new Runnable() {
 			@Override
@@ -50,7 +57,13 @@ public class DataEntryUtil {
 	private void saveToFile(String contents) {
 		FileOutputStream fileOutputStream = null;
 		try {
-			fileOutputStream = new FileOutputStream(fullPath, true);
+			if(specifiedFullPath == null || "".equals(specifiedFullPath.trim())) {
+				String fullPath = filePath + hostName + "_" + fileName;
+				fileOutputStream = new FileOutputStream(fullPath, true);	
+			} else {
+				fileOutputStream = new FileOutputStream(specifiedFullPath, true);
+			}
+			
 			fileOutputStream.write(contents.getBytes());
 		} catch (Exception e) {
 			e.printStackTrace();
@@ -65,11 +78,16 @@ public class DataEntryUtil {
 		}
 	}
 	
+	/**
+	 * 
+	 * @param theFullPath: The fullpath of packet log. If the para is null or empty, will use the default path.
+	 * @return
+	 */
 	public static DataEntryUtil getInstance(String theFullPath) {
 		if(theFullPath == null || "".equals(theFullPath.trim())) {
-			System.out.println("Specified empty data log file name, will use default " + filePath + fileName);
+			System.out.println("Specified empty data log file name, will use default " + filePath + hostName + "_" + fileName);
 		} else {
-			fullPath = theFullPath;
+			specifiedFullPath = theFullPath;
 		}
 		return util;
 	}
