@@ -85,7 +85,7 @@ public class SubscriptionSampler extends AbstractJavaSamplerClient implements Co
 							receivedMessageSize += msg.length();
 							receivedCount++;
 							DataEntry entry = new DataEntry();
-							entry.setHashCode(msg.hashCode());
+							//entry.setHashCode(msg.hashCode());
 							entry.setTime(System.currentTimeMillis());
 							entries.add(entry);
 						}

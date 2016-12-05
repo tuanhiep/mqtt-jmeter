@@ -30,7 +30,7 @@ public class DataEntryUtil {
 								StringBuffer contents = new StringBuffer();
 								while(it.hasNext()) {
 									DataEntry entry = it.next();
-									contents.append(entry.getTime() + ", " + entry.getHashCode());
+									contents.append(entry.getTime() + ", " + entry.getDockerNum());
 									contents.append("\n");
 								}
 								saveToFile(contents.toString());
