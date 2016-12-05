@@ -43,6 +43,7 @@ public class PublishSampler extends AbstractJavaSamplerClient implements Constan
 	private int loopCount = 0;
 	private List<DataEntry> entries = new ArrayList<DataEntry>();
 	private String logPacketFilePath;
+	private static final int BATCH_SIZE = 3;
 	
 	@Override
 	public Arguments getDefaultParameters() {
@@ -70,7 +71,6 @@ public class PublishSampler extends AbstractJavaSamplerClient implements Constan
 		dockerNum = Integer.valueOf(System.getProperty("dockerNum"));
 		threadNum = JMeterContextService.getContext().getThreadNum();
 		loopCount = 0;
-		DataEntryUtil.getInstance("/tmp/data.log").addDataEntries(entries);
 		
 		if (sleepFlag.get()) {
 			printThreadAndTime("reset sleepFlag");
@@ -140,7 +140,7 @@ public class PublishSampler extends AbstractJavaSamplerClient implements Constan
 			entry.setElapsedTime(0);  // placeholder
 			entries.add(entry);
 			
-			if (loopCount % 3 == 0) { // flush buffer of this thread
+			if (loopCount % BATCH_SIZE == BATCH_SIZE-1) { // flush buffer of this thread
 				DataEntryUtil.getInstance(logPacketFilePath).addDataEntries(entries);
 				entries.clear();
 			}
