@@ -2,7 +2,9 @@ package net.xmeter.emqtt.samplers;
 
 import java.text.MessageFormat;
 import java.text.SimpleDateFormat;
+import java.util.ArrayList;
 import java.util.Date;
+import java.util.List;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 
@@ -10,11 +12,14 @@ import org.apache.jmeter.config.Arguments;
 import org.apache.jmeter.protocol.java.sampler.AbstractJavaSamplerClient;
 import org.apache.jmeter.protocol.java.sampler.JavaSamplerContext;
 import org.apache.jmeter.samplers.SampleResult;
+import org.apache.jmeter.threads.JMeterContextService;
 import org.apache.log.Priority;
 import org.fusesource.mqtt.client.Future;
 import org.fusesource.mqtt.client.FutureConnection;
 import org.fusesource.mqtt.client.MQTT;
 import org.fusesource.mqtt.client.QoS;
+
+
 
 public class PublishSampler extends AbstractJavaSamplerClient implements Constants /*, TestStateListener */{
 	
@@ -33,6 +38,12 @@ public class PublishSampler extends AbstractJavaSamplerClient implements Constan
 	private int payload_size = 0;
 	private String payload = null;
 	
+	private int dockerNum = 0; // docker No: starting from 0, passed via jmeter.sh -DdockerNum=$dockerNum
+	private int threadNum = 0; // thread No in this docker/jmeter instance
+	private int loopCount = 0;
+	private List<DataEntry> entries = new ArrayList<DataEntry>();
+	private String logPacketFilePath;
+	
 	@Override
 	public Arguments getDefaultParameters() {
 		Arguments defaultParameters = new Arguments();
@@ -46,6 +57,7 @@ public class PublishSampler extends AbstractJavaSamplerClient implements Constan
 		defaultParameters.addArgument(QOS_LEVEL, String.valueOf(QOS_0));
 		defaultParameters.addArgument(TOPIC_NAME, "test");
 		defaultParameters.addArgument(PAYLOAD_SIZE, "256");
+		defaultParameters.addArgument(LOG_PACKET_FILE_FULL_PATH, "/home/xmeter/DClogs/");
 		return defaultParameters;
 	}
 	
@@ -55,6 +67,11 @@ public class PublishSampler extends AbstractJavaSamplerClient implements Constan
 	
 	@Override
 	public void setupTest(JavaSamplerContext context) {
+		dockerNum = Integer.valueOf(System.getProperty("dockerNum"));
+		threadNum = JMeterContextService.getContext().getThreadNum();
+		loopCount = 0;
+		DataEntryUtil.getInstance("/tmp/data.log").addDataEntries(entries);
+		
 		if (sleepFlag.get()) {
 			printThreadAndTime("reset sleepFlag");
 			sleepFlag.set(false);
@@ -66,6 +83,7 @@ public class PublishSampler extends AbstractJavaSamplerClient implements Constan
 		keepAlive = context.getIntParameter(KEEP_ALIVE);
 		elpasedTime = context.getIntParameter(CONN_ELAPSED_TIME);
 		clientId = Util.generateClientId(context.getParameter(CLIENT_ID_PREFIX));
+		this.logPacketFilePath = context.getParameter(LOG_PACKET_FILE_FULL_PATH, "/home/xmeter/DClogs/");
 		qos = context.getIntParameter(QOS_LEVEL, 0);
 		if (qos==0) {
 			qos_enum = QoS.AT_MOST_ONCE;
@@ -106,14 +124,26 @@ public class PublishSampler extends AbstractJavaSamplerClient implements Constan
 	public SampleResult runTest(JavaSamplerContext context) {
 		SampleResult result = new SampleResult();
         result.sampleStart(); 
-       
+        
 		try {
 			String topicName = context.getParameter(TOPIC_NAME);
-			//Topic[] topics = {new Topic(topicName, QoS.AT_LEAST_ONCE)};
-			//Topic topic= new Topic(topicName, QoS.AT_LEAST_ONCE);
-			
-			Future<Void> pub = connection.publish(topicName, payload.getBytes(), qos_enum, false);
+			long time = System.currentTimeMillis();
+			String pubContent = String.format("%d,%d,%d,%d,%s", dockerNum, threadNum, loopCount++, time, payload);  
+			Future<Void> pub = connection.publish(topicName, pubContent.getBytes(), qos_enum, false);
 			pub.await();
+			
+			DataEntry entry = new DataEntry();
+			entry.setDockerNum(dockerNum);
+			entry.setThreadNum(threadNum);
+			entry.setLoopCount(loopCount);
+			entry.setTime(time);
+			entry.setElapsedTime(0);  // placeholder
+			entries.add(entry);
+			
+			if (loopCount % 3 == 0) { // flush buffer of this thread
+				DataEntryUtil.getInstance(logPacketFilePath).addDataEntries(entries);
+				entries.clear();
+			}
 			
 			result.sampleEnd(); 
             result.setSuccessful(true);
