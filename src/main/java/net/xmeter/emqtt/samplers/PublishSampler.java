@@ -1,12 +1,9 @@
 package net.xmeter.emqtt.samplers;
 
 import java.text.MessageFormat;
-import java.text.SimpleDateFormat;
 import java.util.ArrayList;
-import java.util.Date;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.apache.jmeter.config.Arguments;
 import org.apache.jmeter.protocol.java.sampler.AbstractJavaSamplerClient;
@@ -25,9 +22,6 @@ public class PublishSampler extends AbstractJavaSamplerClient implements Constan
 	
 	private MQTT mqtt = new MQTT();
 	private FutureConnection connection = null;
-	private int elpasedTime;
-	private static AtomicBoolean sleepFlag = new AtomicBoolean(false);
-	
 	private String serverAddr = null;
 	private int port = 0;
 	private int keepAlive = 0;
@@ -43,7 +37,9 @@ public class PublishSampler extends AbstractJavaSamplerClient implements Constan
 	private int loopCount = 0;
 	private List<DataEntry> entries = new ArrayList<DataEntry>();
 	private String logPacketFilePath;
-	private static final int BATCH_SIZE = 3;
+	private DataEntryUtil dataEntryUtil;
+	private static final String LOG_BATCH_SIZE = "LOG_BATCH_SIZE"; 
+	private int batch_size; // buffer size for log writing back
 	
 	@Override
 	public Arguments getDefaultParameters() {
@@ -53,17 +49,13 @@ public class PublishSampler extends AbstractJavaSamplerClient implements Constan
 		defaultParameters.addArgument(KEEP_ALIVE, "300");
 		defaultParameters.addArgument(CLIENT_ID_PREFIX, "pub_");
 		defaultParameters.addArgument(CONN_TIMEOUT, "10");
-		defaultParameters.addArgument(CONN_ELAPSED_TIME, "1");
 		defaultParameters.addArgument(CONN_CLIENT_AUTH, "false");
 		defaultParameters.addArgument(QOS_LEVEL, String.valueOf(QOS_0));
 		defaultParameters.addArgument(TOPIC_NAME, "test");
 		defaultParameters.addArgument(PAYLOAD_SIZE, "256");
 		defaultParameters.addArgument(LOG_PACKET_FILE_FULL_PATH, "/home/xmeter/DClogs/");
+		defaultParameters.addArgument(LOG_BATCH_SIZE, "3");
 		return defaultParameters;
-	}
-	
-	private void printThreadAndTime(String mark) {
-		getLogger().log(Priority.INFO, "*** " + mark + ": " + Thread.currentThread().getName() + ", " +  new SimpleDateFormat("yyyy-MM-dd HH:mm:ss.SSS").format(new Date()));
 	}
 	
 	@Override
@@ -72,18 +64,14 @@ public class PublishSampler extends AbstractJavaSamplerClient implements Constan
 		threadNum = JMeterContextService.getContext().getThreadNum();
 		loopCount = 0;
 		
-		if (sleepFlag.get()) {
-			printThreadAndTime("reset sleepFlag");
-			sleepFlag.set(false);
-			
-		}
-		
 		serverAddr = context.getParameter(SERVER);
 		port = context.getIntParameter(PORT);
 		keepAlive = context.getIntParameter(KEEP_ALIVE);
-		elpasedTime = context.getIntParameter(CONN_ELAPSED_TIME);
 		clientId = Util.generateClientId(context.getParameter(CLIENT_ID_PREFIX));
-		this.logPacketFilePath = context.getParameter(LOG_PACKET_FILE_FULL_PATH, "/home/xmeter/DClogs/");
+		logPacketFilePath = context.getParameter(LOG_PACKET_FILE_FULL_PATH, "/home/xmeter/DClogs/");
+		batch_size = context.getIntParameter(LOG_BATCH_SIZE, 3);
+		dataEntryUtil = DataEntryUtil.getInstance(logPacketFilePath);
+		
 		qos = context.getIntParameter(QOS_LEVEL, 0);
 		if (qos==0) {
 			qos_enum = QoS.AT_MOST_ONCE;
@@ -102,7 +90,7 @@ public class PublishSampler extends AbstractJavaSamplerClient implements Constan
 			mqtt.setKeepAlive((short) keepAlive);
 			if(serverAddr != null && (serverAddr.trim().toLowerCase().startsWith("ssl://"))) {
 				boolean flag = "true".equals(context.getParameter(CONN_CLIENT_AUTH, "false"));
-				getLogger().log(Priority.INFO, "****setSslContext: " + flag);
+				getLogger().info("****setSslContext: " + flag);
 				mqtt.setSslContext(Util.getContext(flag));
 			}
 			//To avoid reconnect
@@ -129,7 +117,6 @@ public class PublishSampler extends AbstractJavaSamplerClient implements Constan
 			String topicName = context.getParameter(TOPIC_NAME);
 			long time = System.currentTimeMillis();
 			String pubContent = String.format("%d,%d,%d,%d,%s", dockerNum, threadNum, loopCount, time, payload); 
-		getLogger().log(Priority.INFO, "**** " + pubContent);
 			Future<Void> pub = connection.publish(topicName, pubContent.getBytes(), qos_enum, false);
 			pub.await();
 			
@@ -141,8 +128,10 @@ public class PublishSampler extends AbstractJavaSamplerClient implements Constan
 			entry.setElapsedTime(0);  // placeholder
 			entries.add(entry);
 			
-			if (loopCount % BATCH_SIZE == BATCH_SIZE-1) { // flush buffer of this thread
-				DataEntryUtil.getInstance(logPacketFilePath).addDataEntries(entries);
+			if (entries.size() == batch_size) {
+				getLogger().debug(MessageFormat.format("runTest: flushing whole buffer, size={0}", entries.size()));
+				
+				dataEntryUtil.addDataEntries(entries);
 				entries.clear();
 			}
 			loopCount++; // for next loop
@@ -153,7 +142,7 @@ public class PublishSampler extends AbstractJavaSamplerClient implements Constan
             result.setResponseMessage(MessageFormat.format("publish successfully via Connection {0}.", connection));
             result.setResponseCodeOK(); 
 		} catch (Exception e) {
-			getLogger().log(Priority.ERROR, e.getMessage(), e);
+			getLogger().error(e.getMessage(), e);
 			result.sampleEnd(); 
             result.setSuccessful(false);
             result.setResponseData((MessageFormat.format("Publish failed by {0}.", clientId)).getBytes());
@@ -167,18 +156,15 @@ public class PublishSampler extends AbstractJavaSamplerClient implements Constan
 	
 	@Override
 	public void teardownTest(JavaSamplerContext context) {
-		try {
-			if(!sleepFlag.get()) {
-				TimeUnit.SECONDS.sleep(elpasedTime);	
-				sleepFlag.set(true);
-			}
-			
-			if(this.connection != null) {
-				this.connection.disconnect();
-				getLogger().log(Priority.INFO, MessageFormat.format("The connection {0} disconneted successfully.", connection));	
-			}
-		} catch (InterruptedException e) {
-			getLogger().log(Priority.ERROR, e.getMessage(), e);
+		if (entries.size() > 0) {
+			getLogger().debug(MessageFormat.format("teardownTest: flushing remaining buffer, size={0}", entries.size()));
+			dataEntryUtil.addDataEntries(entries);
+			entries.clear();
+		}
+		
+		if(this.connection != null) {
+			this.connection.disconnect();
+			getLogger().info(MessageFormat.format("The connection {0} disconneted successfully.", connection));	
 		} 
 	}
 
