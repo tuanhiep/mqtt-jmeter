@@ -26,10 +26,10 @@ public class ConnectionSampler extends AbstractJavaSamplerClient implements Cons
 	@Override
 	public Arguments getDefaultParameters() {
 		Arguments defaultParameters = new Arguments();
-		defaultParameters.addArgument(SERVER, "tcp://10.91.41.18");
+		defaultParameters.addArgument(SERVER, "tcp://localhost");
 		defaultParameters.addArgument(PORT, "1883");
 		defaultParameters.addArgument(KEEP_ALIVE, "5");
-		defaultParameters.addArgument(CLIENT_ID_PREFIX, "xmeter_emqtt");
+		defaultParameters.addArgument(CLIENT_ID_PREFIX, "conn_");
 		defaultParameters.addArgument(CONN_TIMEOUT, "10");
 		defaultParameters.addArgument(CONN_ELAPSED_TIME, "60");
 		defaultParameters.addArgument(CONN_CLIENT_AUTH, "false");

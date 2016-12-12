@@ -34,18 +34,16 @@ public class SubscriptionSampler extends AbstractJavaSamplerClient implements Co
 
 	private boolean debugResponse = false;
 	private List<String> contents = new ArrayList<String>();
-	private List<DataEntry> entries = new ArrayList<DataEntry>();
 	
 	private Object lock = new Object();
 	
 	private String connAuth = "false";
 	private int qos = QOS_0;
 	
-	private String logPacketFilePath;
 	@Override
 	public Arguments getDefaultParameters() {
 		Arguments defaultParameters = new Arguments();
-		defaultParameters.addArgument(SERVER, "tcp://10.91.41.18");
+		defaultParameters.addArgument(SERVER, "tcp://localhost");
 		defaultParameters.addArgument(PORT, "1883");
 		defaultParameters.addArgument(KEEP_ALIVE, "300");
 		defaultParameters.addArgument(CLIENT_ID_PREFIX, "sub_");
@@ -54,8 +52,7 @@ public class SubscriptionSampler extends AbstractJavaSamplerClient implements Co
 		defaultParameters.addArgument(CONN_CLIENT_AUTH, "false");
 		defaultParameters.addArgument(QOS_LEVEL, String.valueOf(QOS_0));
 		defaultParameters.addArgument(DEBUG_RESPONSE, "false");
-		defaultParameters.addArgument(TOPIC_NAME, "test");
-		defaultParameters.addArgument(LOG_PACKET_FILE_FULL_PATH, "/home/xmeter/DClogs/");
+		defaultParameters.addArgument(TOPIC_NAME, "xmeter");
 		return defaultParameters;
 	}
 
@@ -89,20 +86,7 @@ public class SubscriptionSampler extends AbstractJavaSamplerClient implements Co
 							receivedMessageSize += msg.length();
 							receivedCount++;
 							
-							getLogger().info("Received:" + msg);
-							String[] msgArr = msg.split(",");
-							if(msgArr.length > 4) {
-								DataEntry entry = new DataEntry();
-								entry.setDockerNum(Integer.parseInt(msgArr[0]));
-								entry.setThreadNum(Integer.parseInt(msgArr[1]));
-								entry.setLoopCount(Integer.parseInt(msgArr[2]));
-								long now = System.currentTimeMillis();
-								entry.setTime(now);
-								entry.setElapsedTime(now - Long.parseLong(msgArr[3]));
-								entries.add(entry);	
-							} else {
-								getLogger().info("Invalid data sent from pub.");
-							}
+							//getLogger().info("Received:" + msg);
 						}
 					} catch (IOException e) {
 						e.printStackTrace();
@@ -166,7 +150,6 @@ public class SubscriptionSampler extends AbstractJavaSamplerClient implements Co
 		this.connAuth = context.getParameter(CONN_CLIENT_AUTH, "false");
 		String qos = context.getParameter(QOS_LEVEL, String.valueOf(QOS_0));
 		this.qos = Integer.parseInt(qos);
-		this.logPacketFilePath = context.getParameter(LOG_PACKET_FILE_FULL_PATH, "/home/xmeter/DClogs/");
 		
 		if(connection == null) {
 			createCallbackConn(serverAddr, port, keepAlive, clientId, topicName);			
@@ -203,8 +186,6 @@ public class SubscriptionSampler extends AbstractJavaSamplerClient implements Co
 			
 			receivedMessageSize = 0;
 			receivedCount = 0;
-			DataEntryUtil.getInstance(logPacketFilePath).addDataEntries(entries);
-			entries.clear();
 			contents.clear();
 			return result;
 		}
