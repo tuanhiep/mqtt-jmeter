@@ -31,9 +31,12 @@ public class SubscriptionSampler extends AbstractJavaSamplerClient implements Co
 	
 	private int receivedMessageSize = 0;
 	private int receivedCount = 0;
+	private double avgElapsedTime = 0f;
 
 	private boolean debugResponse = false;
 	private List<String> contents = new ArrayList<String>();
+	private boolean useTimestamp = false;
+	private boolean printFlag = false;
 	
 	private Object lock = new Object();
 	
@@ -53,6 +56,7 @@ public class SubscriptionSampler extends AbstractJavaSamplerClient implements Co
 		defaultParameters.addArgument(QOS_LEVEL, String.valueOf(QOS_0));
 		defaultParameters.addArgument(DEBUG_RESPONSE, "false");
 		defaultParameters.addArgument(TOPIC_NAME, "xmeter");
+		defaultParameters.addArgument(TIME_STAMP, "false");
 		return defaultParameters;
 	}
 
@@ -69,7 +73,7 @@ public class SubscriptionSampler extends AbstractJavaSamplerClient implements Co
 			//To avoid reconnect
 			mqtt.setConnectAttemptsMax(0);
 			mqtt.setReconnectAttemptsMax(0);
-
+			
 			connection = mqtt.callbackConnection();
 			connection.listener(new Listener() {
 				@Override
@@ -80,6 +84,18 @@ public class SubscriptionSampler extends AbstractJavaSamplerClient implements Co
 						String msg = baos.toString();
 						ack.run();
 						synchronized (lock) {
+							if(useTimestamp) {
+								long now = System.currentTimeMillis();
+								int index = msg.indexOf(TIME_STAMP_SEP_FLAG);
+								if(index == -1 && (!printFlag)) {
+									getLogger().info("Payload does not include timestamp: " + msg);
+									printFlag = true;
+								} else if(index != -1) {
+									long start = Long.parseLong(msg.substring(0, index));
+									long elapsed = now - start;
+									avgElapsedTime = (avgElapsedTime * receivedCount + elapsed) / (receivedCount + 1);
+								}
+							}
 							if(debugResponse) {
 								contents.add(msg);
 							}
@@ -150,6 +166,7 @@ public class SubscriptionSampler extends AbstractJavaSamplerClient implements Co
 		this.connAuth = context.getParameter(CONN_CLIENT_AUTH, "false");
 		String qos = context.getParameter(QOS_LEVEL, String.valueOf(QOS_0));
 		this.qos = Integer.parseInt(qos);
+		this.useTimestamp = Boolean.parseBoolean(context.getParameter(TIME_STAMP, "false"));
 		
 		if(connection == null) {
 			createCallbackConn(serverAddr, port, keepAlive, clientId, topicName);			
@@ -160,6 +177,8 @@ public class SubscriptionSampler extends AbstractJavaSamplerClient implements Co
 		}
 		
 		SampleResult result = new SampleResult();
+		
+		long startTime = System.currentTimeMillis();
 		result.sampleStart();
 		if(connectFailed) {
 			return fillFailedResult(result, MessageFormat.format("Connection {0} connected failed.", connection));
@@ -183,10 +202,14 @@ public class SubscriptionSampler extends AbstractJavaSamplerClient implements Co
 				avgSize = receivedMessageSize / receivedCount;
 			}
 			result = fillOKResult(result, avgSize, message, content.toString());
+			result.setEndTime(startTime + (long)this.avgElapsedTime);
+			result.setSampleCount(receivedCount);
 			
 			receivedMessageSize = 0;
 			receivedCount = 0;
+			avgElapsedTime = 0f;
 			contents.clear();
+			
 			return result;
 		}
 	}

@@ -14,6 +14,9 @@ public interface Constants {
 	public static final String QOS_LEVEL = "QOS_LEVEL";
 	public static final String PAYLOAD_SIZE = "PAYLOAD_SIZE";
 	
+	public static final String TIME_STAMP = "TIME_STAMP";
+	public static final String TIME_STAMP_SEP_FLAG = "xm_ts";
+	
 	public static final String DEBUG_RESPONSE = "DEBUG_RESPONSE";
 	
 	public static final int QOS_0 = 0;

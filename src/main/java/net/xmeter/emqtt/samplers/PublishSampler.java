@@ -28,6 +28,7 @@ public class PublishSampler extends AbstractJavaSamplerClient implements Constan
 	private QoS qos_enum;
 	private int payload_size = 0;
 	private String payload = null;
+	private boolean addTimestamp = false;
 	
 	@Override
 	public Arguments getDefaultParameters() {
@@ -41,6 +42,7 @@ public class PublishSampler extends AbstractJavaSamplerClient implements Constan
 		defaultParameters.addArgument(QOS_LEVEL, String.valueOf(QOS_0));
 		defaultParameters.addArgument(TOPIC_NAME, "xmeter");
 		defaultParameters.addArgument(PAYLOAD_SIZE, "256");
+		defaultParameters.addArgument(TIME_STAMP, "false");
 		return defaultParameters;
 	}
 	
@@ -50,6 +52,7 @@ public class PublishSampler extends AbstractJavaSamplerClient implements Constan
 		port = context.getIntParameter(PORT);
 		keepAlive = context.getIntParameter(KEEP_ALIVE);
 		clientId = Util.generateClientId(context.getParameter(CLIENT_ID_PREFIX));
+		addTimestamp = Boolean.parseBoolean(context.getParameter(TIME_STAMP));
 		
 		qos = context.getIntParameter(QOS_LEVEL, 0);
 		if (qos==0) {
@@ -93,7 +96,11 @@ public class PublishSampler extends AbstractJavaSamplerClient implements Constan
         
 		try {
 			String topicName = context.getParameter(TOPIC_NAME);
-			Future<Void> pub = connection.publish(topicName, payload.getBytes(), qos_enum, false);
+			String actualPayload = payload;
+			if(addTimestamp) {
+				actualPayload = (System.currentTimeMillis() + TIME_STAMP_SEP_FLAG) + payload;
+			}
+			Future<Void> pub = connection.publish(topicName, actualPayload.getBytes(), qos_enum, false);
 			pub.await();
 			
 			result.sampleEnd(); 
