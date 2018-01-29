@@ -1,7 +1,9 @@
 mqtt-jmeter
 ===========
 
-This is the plugin for Jmeter to Test MQTT protocol
+This is the plugin for Jmeter to Test MQTT protocol.
+
+**Update:** The live project is moved to https://github.com/emqtt/mqtt-jmeter
 
 Tuan Hiep
 ERODS Team
