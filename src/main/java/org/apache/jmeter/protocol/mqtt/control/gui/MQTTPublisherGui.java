@@ -113,6 +113,7 @@ public class MQTTPublisherGui extends AbstractSamplerGui implements
 	private final JLabeledTextField mqttUser = new JLabeledTextField(JMeterUtils.getResString("mqtt_user")); //$NON-NLS-1$
 	private final JLabeledTextField mqttPwd = new JLabeledPasswordField(JMeterUtils.getResString("mqtt_pwd")); //$NON-NLS-1$
 	private final JLabeledTextField iterations = new JLabeledTextField(	JMeterUtils.getResString("mqtt_itertions")); //$NON-NLS-1$
+	private final JLabeledTextField keepAlive = new JLabeledTextField(	JMeterUtils.getResString("mqtt_keep_alive")); //$NON-NLS-1$
 	private final JSyntaxTextArea textMessage = new JSyntaxTextArea(10, 50); // $NON-NLS-1$
 	private final JLabeledRadioI18N msgChoice = new JLabeledRadioI18N("mqtt_message_type", MSGTYPES_ITEMS, TEXT_MSG_RSC); //$NON-NLS-1$
 	private final JLabeledRadioI18N msgFormat = new JLabeledRadioI18N("mqtt_message_format", MSGFORMAT_ITEMS,NO_ENCODING); //$NON-NLS-1$
@@ -158,7 +159,7 @@ public class MQTTPublisherGui extends AbstractSamplerGui implements
 		ControlPanel.add(DPanel);
 		ControlPanel.add(createDestinationPane());
 		ControlPanel.add(createAuthPane());
-		ControlPanel.add(iterations);
+		ControlPanel.add(createOtherPane());
 		ControlPanel.setBorder(BorderFactory.createTitledBorder(BorderFactory.createLineBorder(Color.gray),"Connection Info"));
 		mainPanel.add(ControlPanel);		
 //---------------------------------------Message Format----------------------------------//
@@ -240,6 +241,15 @@ public class MQTTPublisherGui extends AbstractSamplerGui implements
 		panel.add(mqttPwd);
 		return panel;
 	}
+	
+	private Component createOtherPane() {
+		JPanel panel = new JPanel();
+		panel.setLayout(new BoxLayout(panel, BoxLayout.X_AXIS));
+		panel.add(iterations);
+		panel.add(Box.createHorizontalStrut(10));
+		panel.add(keepAlive);
+		return panel;
+	}
 
 	/**
 	 * 
@@ -276,6 +286,7 @@ public class MQTTPublisherGui extends AbstractSamplerGui implements
 		updateConfig(USE_TEXT_RSC);
 		msgChoice.setText(TEXT_MSG_RSC);
 		iterations.setText("1"); // $NON-NLS-1$
+		keepAlive.setText("60");
 		useAuth.setSelected(false);
 		mqttUser.setEnabled(false);
 		mqttPwd.setEnabled(false);
@@ -296,6 +307,7 @@ public class MQTTPublisherGui extends AbstractSamplerGui implements
 		sampler.setTextMessage(textMessage.getText());
 		sampler.setMessageChoice(msgChoice.getText());
 		sampler.setIterations(iterations.getText());
+		sampler.setKeepAlive(keepAlive.getText());
 		sampler.setUseAuth(useAuth.isSelected());
 		sampler.setQuality(typeQoSValue.getText());
         sampler.setRetained(isRetained.isSelected());
@@ -333,6 +345,9 @@ public class MQTTPublisherGui extends AbstractSamplerGui implements
 		textMessage.setCaretPosition(0);
 		msgChoice.setText(sampler.getMessageChoice());
 		iterations.setText(sampler.getIterations());
+		keepAlive.setText(String.valueOf(sampler.getKeepAlive()));
+		clientId.setText(sampler.getCLIENT_ID());
+		suffixLength.setText(sampler.getLength());
 		useAuth.setSelected(sampler.isUseAuth());
 		mqttUser.setEnabled(useAuth.isSelected());
 		mqttPwd.setEnabled(useAuth.isSelected());

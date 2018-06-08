@@ -271,6 +271,9 @@ public class SubscriberSampler extends BaseMQTTSampler implements
 		} else {
 			parameters.addArgument("RANDOM_SUFFIX", "FALSE");
 		}
+		parameters.addArgument("LABEL", this.getName());
+		parameters.addArgument("KEEP_ALIVE", String.valueOf(this.getKeepAlive()));
+		
 		context = new JavaSamplerContext(parameters);
 		subscriber.setupTest(context);
 	}

@@ -415,10 +415,15 @@ public class PublisherSampler extends BaseMQTTSampler implements ThreadListener,
 			parameters.addArgument("RANDOM_SUFFIX","FALSE");
 		}
 		
+		parameters.addArgument("KEEP_ALIVE", String.valueOf(this.getKeepAlive()));
+		
+		parameters.addArgument("LABEL", this.getName());
+		
 		this.context = new JavaSamplerContext(parameters);
 		this.producer.setupTest(this.context);
 	}
-
+	
+ 
 	@Override
 	public void threadFinished() {
 		log.debug("Thread ended " + new Date());

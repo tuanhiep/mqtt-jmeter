@@ -29,7 +29,11 @@ import java.net.URISyntaxException;
 import java.security.SecureRandom;
 import java.util.Date;
 import java.util.Random;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicInteger;
+
+import javax.net.ssl.SSLContext;
 
 import org.apache.commons.codec.binary.Base64;
 import org.apache.commons.codec.binary.BinaryCodec;
@@ -54,7 +58,10 @@ public class MqttPublisher extends AbstractJavaSamplerClient implements
 	private FutureConnection[] connectionArray;
 	public static int numSeq=0;
 	private Random generator = new Random();	
-	private SecureRandom secureGenerator= new SecureRandom(); 
+	private SecureRandom secureGenerator= new SecureRandom();
+	private String label = "";
+	private static final int MQTT_CONNECTION_TIMEOUT = 10;
+	
 	@Override
 	public Arguments getDefaultParameters() {
 		Arguments defaultParameters = new Arguments();
@@ -67,84 +74,95 @@ public class MqttPublisher extends AbstractJavaSamplerClient implements
 	}
 
 	public void setupTest(JavaSamplerContext context) {
+		label = context.getParameter("LABEL");
+
 		String host = context.getParameter("HOST");
 		String clientId = context.getParameter("CLIENT_ID");
-		if("TRUE".equalsIgnoreCase(context.getParameter("RANDOM_SUFFIX"))){
-		clientId= MqttPublisher.getClientId(clientId,Integer.parseInt(context.getParameter("SUFFIX_LENGTH")));	
+		if ("TRUE".equalsIgnoreCase(context.getParameter("RANDOM_SUFFIX"))) {
+			clientId = MqttPublisher.getClientId(clientId, Integer.parseInt(context.getParameter("SUFFIX_LENGTH")));
 		}
-		if("FALSE".equals(context.getParameter("PER_TOPIC"))){			
-			if("TRUE".equals(context.getParameter("AUTH"))){			
-				setupTest(host,clientId,context.getParameter("USER"),context.getParameter("PASSWORD"),1);		
-				}
-				else{	setupTest(host, clientId,1);}		
-
-		}
-		else if("TRUE".equals(context.getParameter("PER_TOPIC"))){
-			
-			String topics= context.getParameter("TOPIC");
-			String[] topicArray = topics.split("\\s*,\\s*");
-			int size= topicArray.length;
-		
-			if("TRUE".equals(context.getParameter("AUTH"))){			
-				setupTest(host,clientId,context.getParameter("USER"),context.getParameter("PASSWORD"),size);		
-				}
-				else {	setupTest(host, clientId,size);}
-		    }
+		if ("FALSE".equals(context.getParameter("PER_TOPIC"))) {
+			if ("TRUE".equals(context.getParameter("AUTH"))) {
+				setupTest(host, clientId, context.getParameter("USER"), context.getParameter("PASSWORD"), 1, context.getIntParameter("KEEP_ALIVE"));
+			} else {
+				setupTest(host, clientId, 1, context.getIntParameter("KEEP_ALIVE"));
 			}
 
-	public void setupTest(String host, String clientId, int size) {
+		} else if ("TRUE".equals(context.getParameter("PER_TOPIC"))) {
+			String topics = context.getParameter("TOPIC");
+			String[] topicArray = topics.split("\\s*,\\s*");
+			int size = topicArray.length;
+
+			if ("TRUE".equals(context.getParameter("AUTH"))) {
+				setupTest(host, clientId, context.getParameter("USER"), context.getParameter("PASSWORD"), size, context.getIntParameter("KEEP_ALIVE"));
+			} else {
+				setupTest(host, clientId, size, context.getIntParameter("KEEP_ALIVE"));
+			}
+		}
+	}
+
+	public void setupTest(String host, String clientId, int size, int keepAlive) {
 		try {
 			JMeterContext jmcx = JMeterContextService.getContext();
 			this.connectionArray= new FutureConnection[size];
 			if(size==1){
-				this.connectionArray[0]= createConnection(host,clientId+jmcx.getThreadNum());
-				this.connectionArray[0].connect().await();
+				this.connectionArray[0]= createConnection(host,clientId+jmcx.getThreadNum(), keepAlive);
+				this.connectionArray[0].connect().await(MQTT_CONNECTION_TIMEOUT, TimeUnit.SECONDS);
 				this.getLogger().info("NUMBER CONNECTION: "+PublisherSampler.numberOfConnection.getAndIncrement());
 			}
 			else 
 			{				
 				for(int i = 0;i< size;i++){
-					this.connectionArray[i]= createConnection(host,clientId+jmcx.getThreadNum()+i);
-					this.connectionArray[i].connect().await();
+					this.connectionArray[i]= createConnection(host,clientId+jmcx.getThreadNum()+i, keepAlive);
+					this.connectionArray[0].connect().await(MQTT_CONNECTION_TIMEOUT, TimeUnit.SECONDS);
 					this.getLogger().info("NUMBER CONNECTION: "+PublisherSampler.numberOfConnection.getAndIncrement());
 				}
 			}
 					
-		} catch (Exception e) {
+		}catch(TimeoutException ex) { 
+			getLogger().error("The connection to MQTT server is timeout after " + MQTT_CONNECTION_TIMEOUT + " seconds.");
+		}catch (Exception e) {
 			getLogger().error(e.getMessage());
 		}
 		
 	}
-	public void setupTest(String host, String clientId, String user, String password, int size) {
+	public void setupTest(String host, String clientId, String user, String password, int size, int keepAlive) {
 		try {
 			JMeterContext jmcx = JMeterContextService.getContext();
 			this.connectionArray= new FutureConnection[size];
 			
 			if(size==1){
-				this.connectionArray[0]= createConnection(host,clientId+jmcx.getThreadNum(),user,password);
-				this.connectionArray[0].connect().await();
+				this.connectionArray[0]= createConnection(host,clientId+jmcx.getThreadNum(),user,password, keepAlive);
+				this.connectionArray[0].connect().await(MQTT_CONNECTION_TIMEOUT, TimeUnit.SECONDS);
 				this.getLogger().info("NUMBER CONNECTION: "+PublisherSampler.numberOfConnection.getAndIncrement());
 				
-			}
-			else {
+			} else {
 				for(int i = 0;i< size;i++){
-					this.connectionArray[i]= createConnection(host,clientId+jmcx.getThreadNum()+i,user,password);
-					this.connectionArray[i].connect().await();
+					this.connectionArray[i]= createConnection(host,clientId+jmcx.getThreadNum()+i,user,password, keepAlive);
+					this.connectionArray[0].connect().await(MQTT_CONNECTION_TIMEOUT, TimeUnit.SECONDS);
 					this.getLogger().info("NUMBER CONNECTION: "+PublisherSampler.numberOfConnection.getAndIncrement());
 				 }
-				 }
+			}
 			getLogger().info("Connection successful..");
-		} catch (Exception e) {
+		} catch(TimeoutException ex) { 
+			getLogger().error("The connection to MQTT server is timeout after " + MQTT_CONNECTION_TIMEOUT + " seconds.");
+		} catch(Exception e) {
 			getLogger().error(e.getMessage());
 		}
 	}
 
-	private FutureConnection createConnection(String host,String clientId) {
-
+	private FutureConnection createConnection(String host,String clientId, int keepAlive) {
 		try {
 			MQTT client = new MQTT();
 			client.setHost(host);
 			client.setClientId(clientId);
+			client.setKeepAlive((short) keepAlive);
+			if(host != null && (host.trim().toLowerCase().startsWith("ssl://"))) {
+				SSLContext context = SSLUtil.getContext();
+				if(context != null) {
+					client.setSslContext(context);	
+				}
+			}
 			return client.futureConnection();
 		} catch (URISyntaxException e) {
 			getLogger().error(e.getMessage());
@@ -152,7 +170,7 @@ public class MqttPublisher extends AbstractJavaSamplerClient implements
 		}
 
 	}
-	private FutureConnection createConnection(String host,String clientId,String user, String password) {
+	private FutureConnection createConnection(String host,String clientId,String user, String password, int keepAlive) {
 
 		try {
 			MQTT client = new MQTT();
@@ -160,6 +178,14 @@ public class MqttPublisher extends AbstractJavaSamplerClient implements
 			client.setUserName(user);
 			client.setPassword(password);
 			client.setClientId(clientId);
+			client.setKeepAlive((short) keepAlive);
+			
+			if(host != null && (host.trim().toLowerCase().startsWith("ssl://"))) {
+				SSLContext context = SSLUtil.getContext();
+				if(context != null) {
+					client.setSslContext(context);	
+				}
+			}
 			return client.futureConnection();
 		} catch (URISyntaxException e) {
 			getLogger().error(e.getMessage());
@@ -237,9 +263,7 @@ public class MqttPublisher extends AbstractJavaSamplerClient implements
 
 	private void produceBigVolume(String topic, int aggregate,
 			String qos, String isRetained, String useTimeStamp,
-			String useNumberSeq, String format, String charset,String sizeArray,String isListTopic,String strategy,String isPerTopic) {
-		try {
-
+			String useNumberSeq, String format, String charset,String sizeArray,String isListTopic,String strategy,String isPerTopic) throws Exception {
 			// Quality
 			QoS quality = null;
 			if (MQTTPublisherGui.EXACTLY_ONCE.equals(qos)) {
@@ -257,12 +281,12 @@ public class MqttPublisher extends AbstractJavaSamplerClient implements
 			// List topic
 			if("FALSE".equals(isListTopic)){		
 				for (int i = 0; i < aggregate; ++i) {
-					byte[] payload = createBigVolume( useTimeStamp, useNumberSeq,format, charset,sizeArray);	
+					byte[] payload = createBigVolume( useTimeStamp, useNumberSeq,format, charset,sizeArray);
+					checkConnActivity(this.connectionArray[0]);
 					this.connectionArray[0].publish(topic,payload,quality,retained).await();
 					total.incrementAndGet();
 				}
-			}
-			else if("TRUE".equals(isListTopic)){
+			} else if("TRUE".equals(isListTopic)){
 				String[] topicArray= topic.split("\\s*,\\s*");
 				int length= topicArray.length;
 				Random rand = new Random();	
@@ -272,171 +296,166 @@ public class MqttPublisher extends AbstractJavaSamplerClient implements
 					if("ROUND_ROBIN".equals(strategy)){
 						for(int j=0;j<length;j++){							
 							if("TRUE".equals(isPerTopic)){
+								checkConnActivity(this.connectionArray[j]);
 								this.connectionArray[j].publish(topicArray[j],payload,quality, retained).await();
 								total.incrementAndGet();
 							} else if("FALSE".equals(isPerTopic)){
+								checkConnActivity(this.connectionArray[0]);
 								this.connectionArray[0].publish(topicArray[j],payload,quality, retained).await();	
 								total.incrementAndGet();
 							}							
 						}
-					}
-					else if("RANDOM".equals(strategy)){											
+					} else if("RANDOM".equals(strategy)){											
 						int  r = rand.nextInt(length);
 						if("TRUE".equals(isPerTopic)){
+							checkConnActivity(this.connectionArray[r]);
 							this.connectionArray[r].publish(topicArray[r],payload,quality,retained).await();
 							total.incrementAndGet();
 						} else if("FALSE".equals(isPerTopic)){
+							checkConnActivity(this.connectionArray[0]);
 							this.connectionArray[0].publish(topicArray[r],payload,quality,retained).await();
 							total.incrementAndGet();
 						}
 						
 					}
-						}
+				}
 			}
-					} catch (Exception e) {
-			e.printStackTrace();
-			getLogger().warn(e.getLocalizedMessage(), e);
-		}
-			
 	}
 
 
-
-	private void produce(String message, String topic, int aggregate,
-			String qos, String isRetained, String useTimeStamp, String useNumberSeq,String type_value, String format, String charset,String isListTopic,String strategy,String isPerTopic) throws Exception {
-		
-		try {
-			// Quality
-			QoS quality = null;
-			if (MQTTPublisherGui.EXACTLY_ONCE.equals(qos)) {
-				quality = QoS.EXACTLY_ONCE;
-			} else if (MQTTPublisherGui.AT_LEAST_ONCE.equals(qos)) {
-				quality = QoS.AT_LEAST_ONCE;
-			} else if (MQTTPublisherGui.AT_MOST_ONCE.equals(qos)) {
-				quality = QoS.AT_MOST_ONCE;
+	private void produce(String message, String topic, int aggregate, String qos, String isRetained, String useTimeStamp, String useNumberSeq,String type_value, String format, String charset,String isListTopic,String strategy,String isPerTopic) throws Exception {
+		// Quality
+		QoS quality = null;
+		if (MQTTPublisherGui.EXACTLY_ONCE.equals(qos)) {
+			quality = QoS.EXACTLY_ONCE;
+		} else if (MQTTPublisherGui.AT_LEAST_ONCE.equals(qos)) {
+			quality = QoS.AT_LEAST_ONCE;
+		} else if (MQTTPublisherGui.AT_MOST_ONCE.equals(qos)) {
+			quality = QoS.AT_MOST_ONCE;
+		}
+		// Retained
+		boolean retained = false;
+		if ("TRUE".equals(isRetained))
+			retained = true;
+		// List topic
+		if("FALSE".equals(isListTopic)){		
+			for (int i = 0; i < aggregate; ++i) {
+				byte[] payload = createPayload(message, useTimeStamp, useNumberSeq, type_value,format, charset);
+				checkConnActivity(this.connectionArray[0]);
+				this.connectionArray[0].publish(topic,payload,quality,retained).await();
+				total.incrementAndGet();
 			}
-			// Retained
-			boolean retained = false;
-			if ("TRUE".equals(isRetained))
-				retained = true;
-			// List topic
-			if("FALSE".equals(isListTopic)){		
-				for (int i = 0; i < aggregate; ++i) {
-					byte[] payload = createPayload(message, useTimeStamp, useNumberSeq, type_value,format, charset);	
-					this.connectionArray[0].publish(topic,payload,quality,retained).await();
-					total.incrementAndGet();
-				}
-			}
-			else if("TRUE".equals(isListTopic)){
-				String[] topicArray= topic.split("\\s*,\\s*");
-				int length= topicArray.length;
-				Random rand = new Random();	
-				for (int i = 0; i < aggregate; ++i) {
-					byte[] payload = createPayload(message, useTimeStamp, useNumberSeq, type_value,format, charset);	
-					//---------------------Publish after strategy------------------//					
-					if("ROUND_ROBIN".equals(strategy)){
-						for(int j=0;j<length;j++){
-							if("TRUE".equals(isPerTopic)){
-								this.connectionArray[j].publish(topicArray[j],payload,quality, retained).await();
-								total.incrementAndGet();
-							} else if("FALSE".equals(isPerTopic)){
-								this.connectionArray[0].publish(topicArray[j],payload,quality, retained).await();							
-								total.incrementAndGet();
-							}											
-						}
-					}
-					else if("RANDOM".equals(strategy)){											
-						int  r = rand.nextInt(length);
+		} else if("TRUE".equals(isListTopic)){
+			String[] topicArray= topic.split("\\s*,\\s*");
+			int length= topicArray.length;
+			Random rand = new Random();	
+			for (int i = 0; i < aggregate; ++i) {
+				byte[] payload = createPayload(message, useTimeStamp, useNumberSeq, type_value,format, charset);	
+				//---------------------Publish after strategy------------------//					
+				if("ROUND_ROBIN".equals(strategy)){
+					for(int j=0;j<length;j++){
 						if("TRUE".equals(isPerTopic)){
-							this.connectionArray[r].publish(topicArray[r],payload,quality,retained).await();
+							checkConnActivity(this.connectionArray[j]);
+							this.connectionArray[j].publish(topicArray[j],payload,quality, retained).await();
 							total.incrementAndGet();
 						} else if("FALSE".equals(isPerTopic)){
-							this.connectionArray[0].publish(topicArray[r],payload,quality,retained).await();
+							checkConnActivity(this.connectionArray[0]);
+							this.connectionArray[0].publish(topicArray[j],payload,quality, retained).await();							
 							total.incrementAndGet();
-						}
+						}											
 					}
-						}
-			}					
-		} catch (Exception e) {
-			e.printStackTrace();
-			getLogger().warn(e.getLocalizedMessage(), e);
-		}
+				} else if("RANDOM".equals(strategy)){											
+					int  r = rand.nextInt(length);
+					if("TRUE".equals(isPerTopic)){
+						checkConnActivity(this.connectionArray[r]);
+						this.connectionArray[r].publish(topicArray[r],payload,quality,retained).await();
+						total.incrementAndGet();
+					} else if("FALSE".equals(isPerTopic)){
+						checkConnActivity(this.connectionArray[0]);
+						this.connectionArray[0].publish(topicArray[r],payload,quality,retained).await();
+						total.incrementAndGet();
+					}
+				}
+			}
+		}					
 	}
 
 	public void produceRandomly(String seed, String min, String max, String type_random,String topic, int aggregate,
-			String qos, String isRetained, String useTimeStamp, String useNumberSeq,String type_value,String format, String charset,String isListTopic,String strategy,String isPerTopic){
-		try {
-			// Quality
-			QoS quality = null;
-			if (MQTTPublisherGui.EXACTLY_ONCE.equals(qos)) {
-				quality = QoS.EXACTLY_ONCE;
-			} else if (MQTTPublisherGui.AT_LEAST_ONCE.equals(qos)) {
-				quality = QoS.AT_LEAST_ONCE;
-			} else if (MQTTPublisherGui.AT_MOST_ONCE.equals(qos)) {
-				quality = QoS.AT_MOST_ONCE;
+		String qos, String isRetained, String useTimeStamp, String useNumberSeq,String type_value,String format, String charset,String isListTopic,String strategy,String isPerTopic) throws Exception {
+		// Quality
+		QoS quality = null;
+		if (MQTTPublisherGui.EXACTLY_ONCE.equals(qos)) {
+			quality = QoS.EXACTLY_ONCE;
+		} else if (MQTTPublisherGui.AT_LEAST_ONCE.equals(qos)) {
+			quality = QoS.AT_LEAST_ONCE;
+		} else if (MQTTPublisherGui.AT_MOST_ONCE.equals(qos)) {
+			quality = QoS.AT_MOST_ONCE;
+		}
+		// Retained
+		boolean retained = false;
+		if ("TRUE".equals(isRetained))
+		retained = true;
+		// List topic
+		if("FALSE".equals(isListTopic)){		
+			for (int i = 0; i < aggregate; ++i) {
+				byte[] payload = this.createRandomPayload(seed, min, max, type_random, useTimeStamp, useNumberSeq, type_value,format, charset);
+				checkConnActivity(this.connectionArray[0]);
+				this.connectionArray[0].publish(topic,payload,quality,retained).await();
+				total.incrementAndGet();
 			}
-			// Retained
-			boolean retained = false;
-			if ("TRUE".equals(isRetained))
-			retained = true;
-			// List topic
-			if("FALSE".equals(isListTopic)){		
-				for (int i = 0; i < aggregate; ++i) {
-					byte[] payload = this.createRandomPayload(seed, min, max, type_random, useTimeStamp, useNumberSeq, type_value,format, charset);		
-					this.connectionArray[0].publish(topic,payload,quality,retained).await();
-					total.incrementAndGet();
-				}
-			}
-			else if("TRUE".equals(isListTopic)){
-				String[] topicArray= topic.split("\\s*,\\s*");
-				int length= topicArray.length;
-				Random rand = new Random();	
-				for (int i = 0; i < aggregate; ++i) {
-					byte[] payload = this.createRandomPayload(seed, min, max, type_random, useTimeStamp, useNumberSeq, type_value,format, charset);		
-					//---------------------Publish after strategy------------------//					
-					if("ROUND_ROBIN".equals(strategy)){
-						for(int j=0;j<length;j++){
-							if("TRUE".equals(isPerTopic)){
-								this.connectionArray[j].publish(topicArray[j],payload,quality, retained).await();
-								total.incrementAndGet();
-							} else if("FALSE".equals(isPerTopic)){
-								this.connectionArray[0].publish(topicArray[j],payload,quality, retained).await();							
-								total.incrementAndGet();
-							}
-						}
-					}
-					else if("RANDOM".equals(strategy)){											
-						int  r = rand.nextInt(length);
-						
+		} else if("TRUE".equals(isListTopic)){
+			String[] topicArray= topic.split("\\s*,\\s*");
+			int length= topicArray.length;
+			Random rand = new Random();	
+			for (int i = 0; i < aggregate; ++i) {
+				byte[] payload = this.createRandomPayload(seed, min, max, type_random, useTimeStamp, useNumberSeq, type_value,format, charset);		
+				//---------------------Publish after strategy------------------//					
+				if("ROUND_ROBIN".equals(strategy)){
+					for(int j=0;j<length;j++){
 						if("TRUE".equals(isPerTopic)){
-							this.connectionArray[r].publish(topicArray[r],payload,quality,retained).await();
+							checkConnActivity(this.connectionArray[j]);
+							this.connectionArray[j].publish(topicArray[j],payload,quality, retained).await();
 							total.incrementAndGet();
 						} else if("FALSE".equals(isPerTopic)){
-							this.connectionArray[0].publish(topicArray[r],payload,quality,retained).await();
+							checkConnActivity(this.connectionArray[0]);
+							this.connectionArray[0].publish(topicArray[j],payload,quality, retained).await();							
 							total.incrementAndGet();
 						}
-						
 					}
-						}
-			}			
-		} catch (Exception e) {
-			e.printStackTrace();
-			getLogger().warn(e.getLocalizedMessage(), e);
-		}
-			
+				} else if("RANDOM".equals(strategy)){											
+					int  r = rand.nextInt(length);
+					if("TRUE".equals(isPerTopic)){
+						checkConnActivity(this.connectionArray[r]);
+						this.connectionArray[r].publish(topicArray[r],payload,quality,retained).await();
+						total.incrementAndGet();
+					} else if("FALSE".equals(isPerTopic)){
+						checkConnActivity(this.connectionArray[r]);
+						this.connectionArray[0].publish(topicArray[r],payload,quality,retained).await();
+						total.incrementAndGet();
+					}
+				}
+			}
+		}			
 	}
 
+	private void checkConnActivity(FutureConnection conn) throws Exception {
+		if(conn.isConnected()) {
+			return;
+		} else {
+			throw new RuntimeException("Cannot connect to the MQTT server.");
+		}
+	}
+	
 	public SampleResult runTest(JavaSamplerContext context) {
 		SampleResult result = new SampleResult();
-
+		result.setSampleLabel(label);
 		try {
-			
 			result.sampleStart(); // start stopwatch
 			produce(context);
 			result.sampleEnd(); // stop stopwatch
 			result.setSuccessful(true);
 			result.setResponseMessage("Sent " + total.get() + " messages total");
-			result.setResponseCode("OK");
+			result.setResponseCodeOK();
 		} catch (Exception e) {
 			result.sampleEnd(); // stop stopwatch
 			result.setSuccessful(false);
