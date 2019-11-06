@@ -31,6 +31,13 @@ Update the file messages.properties in the folder :/org/apache/jmeter/resources/
 in **ApacheJMeter_core.jar** by new file messages.properties from
 https://github.com/tuanhiep/mqtt-jmeter/tree/master/ressource
 
+Steps to update the **ApacheJMeter_core.jar** :
+1. Copy the "messages.properties" file from the github project - https://github.com/tuanhiep/mqtt-jmeter : /org/apache/jmeter/resources/ folder
+2. Extract the ApacheJMeter_core.jar present in the repository lib/ext of Jmeter.
+3. Replace the existing messages.properties file present in extracted ApacheJMeter_core.jar of Jmeter(lib/ext) : /org/apache/jmeter/resources/messages.properties with the "messages.properties" file from the github project - https://github.com/tuanhiep/mqtt-jmeter : /org/apache/jmeter/resources/ folder
+4. Create ApacheJMeter_core.jar again from the extracted jar file. Command to create jar: jar cvf ApacheJMeter_core.jar org
+5. Now replace the jmeter(lib/ext) ApacheJMeter_core.jar with new jar created in step4.
+
 #  How to use MQTT plugin in Jmeter
 
 ##  MQTT Publisher
